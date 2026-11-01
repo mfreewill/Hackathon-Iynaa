@@ -1,0 +1,105 @@
+# Repository hygiene for hackathon-iynaa.
+#
+# This file is accident prevention only. It is not publication, secret,
+# or rights clearance: scan staged bytes and clear rights separately
+# before anything is published. A file that is not ignored (for example
+# an image or PDF) is still only a candidate and needs explicit
+# approval before it is added.
+#
+# Source, tests, manifests, lockfiles, Markdown, JSON, and sanitized
+# evidence are deliberately NOT ignored, so they stay visible for
+# review. There are no exceptions that re-admit secrets merely because
+# they sit in src/, tests/, or evidence/.
+
+# Environment files, at any depth. Patterns without a slash match in
+# every directory. Only .env.example and .env.sample are re-included,
+# and they must stay EMPTY placeholder templates (names only, no real
+# values). Re-inclusion is not a guarantee that a file is secret-free.
+.env
+.env.*
+*.env
+.envrc
+!.env.example
+!.env.sample
+
+# Private keys and credential stores, at any depth.
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.kdbx
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.netrc
+_netrc
+.pypirc
+.git-credentials
+.aws/
+.azure/
+.kube/
+credentials.json
+secrets.json
+service-account.json
+service_account.json
+
+# Local agent homes, context, and journals. Sanitized evidence must be
+# copied deliberately to a reviewed location, never re-included from
+# these directories.
+.muse/
+.hermes/
+
+# Caches, virtual environments, dependencies, and build output.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.eggs/
+*.egg-info/
+.venv/
+venv/
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.cache/
+.next/
+.nuxt/
+.svelte-kit/
+.turbo/
+dist/
+build/
+target/
+htmlcov/
+.coverage
+
+# Logs, at any depth, including inside evidence/.
+*.log
+logs/
+
+# Local uploads, local data, databases, and private study material.
+# /data/ is anchored to the repository root so curated test fixtures
+# such as tests/data/ stay visible for review. uploads/ and private/
+# match at any depth because user uploads and private material are
+# never source.
+uploads/
+/data/
+private/
+/private-study/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.dump
+
+# Operating-system junk.
+.DS_Store
+Thumbs.db

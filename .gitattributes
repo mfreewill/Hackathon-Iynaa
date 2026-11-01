@@ -1,0 +1,49 @@
+# Line endings and binary handling for hackathon-iynaa.
+#
+# Text files are UTF-8 by project convention and are stored with LF.
+# These attributes normalize line endings only; they cannot validate
+# that a file really is UTF-8. No LFS, filters, or hooks are defined.
+
+* text=auto eol=lf
+
+# Actual binary assets: never normalize or text-diff them. SVG is XML
+# text and is deliberately not listed here.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.bmp binary
+*.ico binary
+*.tif binary
+*.tiff binary
+*.pdf binary
+*.mp4 binary
+*.mov binary
+*.mkv binary
+*.avi binary
+*.webm binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
+*.m4a binary
+*.flac binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.zip binary
+*.gz binary
+
+# Uppercase variants, so case-sensitive checkouts behave the same.
+*.PNG binary
+*.JPG binary
+*.JPEG binary
+*.GIF binary
+*.TIF binary
+*.TIFF binary
+*.PDF binary
+*.MP4 binary
+*.MOV binary

@@ -1,0 +1,490 @@
+/* Teacher setup/source workspace. System Arabic fonts only. */
+:root {
+  --paper: #faf8f3;
+  --ink: #1b2430;
+  --muted: #5a6572;
+  --teal: #0f766e;
+  --teal-strong: #0a5c55;
+  --amber: #b45309;
+  --brick: #b3261e;
+  --line: #ddd5c6;
+  --surface: #fffdf8;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Naskh Arabic", "Amiri", "Traditional Arabic",
+    "Segoe UI", Tahoma, serif;
+  font-size: 18px;
+  line-height: 1.95;
+  letter-spacing: 0;
+}
+
+.workspace-header {
+  padding: 16px 24px 8px;
+}
+
+.non-durable-warning {
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  margin: 0 0 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+}
+
+.workspace-status {
+  color: var(--teal-strong);
+  margin: 0;
+  min-height: 2em;
+}
+
+.pane-switch {
+  display: none;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
+  gap: 24px;
+  align-items: start;
+  padding: 8px 24px 32px;
+}
+
+.pane {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.source-pane {
+  position: sticky;
+  top: 16px;
+}
+
+h1 {
+  font-size: 22px;
+  margin: 16px 0 8px;
+}
+
+h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+
+.stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stage {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  padding: 2px 10px;
+}
+
+.stage-current {
+  border-color: var(--teal);
+  color: var(--teal-strong);
+  font-weight: 700;
+}
+
+.rights-note {
+  color: var(--muted);
+}
+
+.field {
+  margin-block: 16px;
+}
+
+.field label {
+  display: block;
+  font-weight: 700;
+  margin-block-end: 4px;
+}
+
+.field input {
+  background: #ffffff;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 6px 12px;
+  width: 100%;
+}
+
+.field input[type="number"] {
+  max-width: 12rem;
+}
+
+.hint {
+  color: var(--muted);
+  display: block;
+  margin-block-start: 4px;
+}
+
+.setup-error {
+  color: var(--brick);
+  font-weight: 700;
+}
+
+.replacement-warning {
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  padding: 8px 16px;
+}
+
+.primary-action {
+  background: var(--teal);
+  border: 1px solid var(--teal-strong);
+  border-radius: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 8px 24px;
+}
+
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.future-stages-note {
+  color: var(--muted);
+  margin-block-start: 24px;
+}
+
+.source-empty {
+  color: var(--muted);
+}
+
+.source-figure {
+  margin: 0;
+}
+
+.source-figure img {
+  box-shadow: 0 2px 10px rgb(27 36 48 / 18%);
+  display: block;
+  height: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
+.source-figure figcaption {
+  color: var(--muted);
+  margin-block-start: 8px;
+}
+
+a {
+  color: var(--teal-strong);
+}
+
+a[data-testid="source-original-link"] {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 16px;
+}
+
+.source-details-list {
+  margin: 8px 0 0;
+}
+
+.source-details-list div {
+  margin-block: 8px;
+}
+
+.source-details-list dt {
+  font-weight: 700;
+}
+
+.source-details-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.technical-value {
+  unicode-bidi: isolate;
+}
+
+button,
+summary,
+a {
+  min-height: 44px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal-strong);
+  outline-offset: 2px;
+}
+
+.review-stage {
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 8px;
+}
+
+.review-empty,
+.preview-empty {
+  color: var(--muted);
+}
+
+.region-item,
+.question-card,
+.preview-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-block: 16px;
+  padding: 12px 16px;
+}
+
+.region-item h3,
+.question-card h3,
+.preview-item h3 {
+  font-size: 18px;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.region-meta,
+.question-meta,
+.preview-meta {
+  color: var(--muted);
+  margin: 4px 0;
+}
+
+/* Current author and teacher decision are independent facts:
+   two adjacent text badges, never one merged label. */
+[data-testid="question-author"],
+[data-testid="question-decision"],
+[data-testid="preview-author"],
+[data-testid="preview-decision"] {
+  background: var(--paper);
+  border: 1px solid var(--teal);
+  border-radius: 999px;
+  color: var(--teal-strong);
+  display: inline-block;
+  margin-inline-end: 8px;
+  padding: 0 12px;
+}
+
+.source-selected-context {
+  color: var(--muted);
+  margin-block-end: 0;
+}
+
+.source-selected-text {
+  border-inline-start: 3px solid var(--teal);
+  margin-block-start: 4px;
+  overflow-wrap: anywhere;
+  padding-inline-start: 12px;
+  white-space: pre-wrap;
+}
+
+.source-selected-context:empty,
+.source-selected-text:empty {
+  display: none;
+}
+
+.setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 16px;
+}
+
+.region-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+}
+
+.region-flags li {
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  padding: 0 10px;
+}
+
+.review-form label,
+.question-edit-form label {
+  display: block;
+  font-weight: 700;
+  margin-block: 12px 4px;
+}
+
+.review-form textarea,
+.review-form input,
+.review-form select,
+.question-edit-form textarea,
+.question-edit-form input,
+.question-edit-form select {
+  background: #ffffff;
+  border: 1px solid var(--muted);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 44px;
+  padding: 6px 12px;
+  width: 100%;
+}
+
+.review-form textarea,
+.question-edit-form textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+
+.secondary-action,
+.item-actions button {
+  background: var(--surface);
+  border: 1px solid var(--teal);
+  border-radius: 10px;
+  color: var(--teal-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 16px;
+}
+
+.item-actions button:disabled,
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.slot-outcomes {
+  margin-block: 12px;
+}
+
+.slot-outcome {
+  margin-block: 4px;
+}
+
+.question-blocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.question-block {
+  border: 1px solid var(--brick);
+  border-radius: 10px;
+  color: var(--brick);
+  padding: 0 10px;
+}
+
+.teacher-preview-warning {
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  font-weight: 700;
+  padding: 8px 16px;
+}
+
+details summary {
+  cursor: pointer;
+  padding-block: 8px;
+}
+
+/* Evidence rows: structural 8px separation inside the row and
+   between stacked rows, never source whitespace. */
+.evidence-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.evidence-row + .evidence-row {
+  margin-block-start: 8px;
+}
+
+/* A card/preview disclosure never touches the evidence controls
+   (or disclosure) directly above it. */
+.question-card details,
+.preview-item details {
+  margin-block-start: 8px;
+}
+
+@media (max-width: 1023.98px) {
+  .workspace-header {
+    padding: 16px 16px 8px;
+  }
+
+  .pane-switch {
+    background: var(--paper);
+    display: flex;
+    gap: 8px;
+    padding: 8px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .pane-switch [role="tab"] {
+    background: var(--surface);
+    border: 1px solid var(--teal);
+    border-radius: 10px;
+    color: var(--teal-strong);
+    cursor: pointer;
+    flex: 1;
+    font: inherit;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 6px 16px;
+  }
+
+  .pane-switch [role="tab"][aria-selected="true"] {
+    background: var(--teal);
+    color: #ffffff;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px 16px 32px;
+  }
+
+  .source-pane {
+    position: static;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

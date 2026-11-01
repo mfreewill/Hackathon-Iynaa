@@ -1,0 +1,7 @@
+# Direct runtime dependencies.
+# Versions are the measured known-passing stack from Python 3.11.15.
+fastapi==0.133.1
+starlette==1.10.0
+Pillow==12.3.0
+pypdfium2==5.14.0
+uvicorn==0.41.0

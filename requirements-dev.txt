@@ -1,0 +1,6 @@
+# Test and fixture-generation dependencies.
+# Versions are the measured known-passing stack from Python 3.11.15.
+-r requirements.txt
+httpx==0.28.1
+playwright==1.63.0
+cryptography==50.0.2

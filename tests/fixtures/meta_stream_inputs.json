@@ -1,0 +1,17 @@
+{
+  "provenance": "Controller-authored synthetic credential/value fixture only; not Meta output or school source.",
+  "synthetic_credential": "SYNTHETIC-STREAM-ONLY-NOT-A-REAL-KEY",
+  "raw": {
+    "sections": [
+      {
+        "section_id": "s1",
+        "kind": "body",
+        "text": "  نَصّ عربي ١٢ / 12 𝄞\nثانٍ  ",
+        "review_reasons": []
+      }
+    ],
+    "page_continues": false,
+    "review_notes": []
+  },
+  "response_id": "resp-stream-synthetic-001"
+}

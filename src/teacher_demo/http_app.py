@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
-from starlette.concurrency import run_in_threadpool
+from starlette.concurrency import run_in_threadpool as _base_run_in_threadpool
 
 from .adapter import RequestStateError, TeacherDemoError, TeacherWorkspace
 from .http_client import register_client
@@ -44,6 +44,7 @@ from .http_teacher_publication import (
     retain_terminal_reserves,
     session_graph_cost,
 )
+from .hosted_usage import UsageDenied
 from .meta_protocol import MetaProtocolError
 from .meta_provider import MetaProvider, ProviderCallContext
 from .page_decoder import MAX_ORIGINAL_BYTES, PageDecodeError, decode_page
@@ -122,6 +123,41 @@ def _meta_error_outcome(error):
     return outcome
 
 
+import math
+from contextvars import ContextVar
+
+
+_SESSION_PINNED_STATE_KEY = "hosted_session_pinned_state"
+_HOSTED_THREADPOOL_DRAIN: ContextVar[bool] = ContextVar(
+    "hosted_threadpool_drain", default=False)
+
+
+def _session_now():
+    return time.monotonic()
+
+
+async def run_in_threadpool(fn, *args, **kwargs):
+    if not _HOSTED_THREADPOOL_DRAIN.get():
+        return await _base_run_in_threadpool(fn, *args, **kwargs)
+    task = asyncio.create_task(
+        _base_run_in_threadpool(fn, *args, **kwargs))
+    try:
+        return await asyncio.shield(task)
+    except asyncio.CancelledError:
+        # Drain the one shielded threadpool task to completion on
+        # this and any repeated cancellation, consume its outcome,
+        # and only then let the cancellation propagate. The thread
+        # work is never detached from this wrapper.
+        while not task.done():
+            try:
+                await asyncio.shield(asyncio.wait({task}))
+            except asyncio.CancelledError:
+                continue
+        if not task.cancelled():
+            task.exception()
+        raise
+
+
 @dataclass
 class _SessionState:
     csrf_token: str
@@ -150,6 +186,11 @@ class _SessionState:
     provider_contexts: dict = field(default_factory=dict)
     graph_cost: int = 0
     publication_epoch: int = 0
+    # Hosted idle-lease authority metadata, owned under the
+    # registry lock and never measured payload: monotonic last
+    # activity plus the count of pinned in-flight HTTP owners.
+    last_seen: float = field(default_factory=_session_now)
+    active_http: int = 0
 
 
 def create_app(
@@ -157,6 +198,8 @@ def create_app(
     allowed_hosts=("127.0.0.1:8000",),
     allowed_origin="http://127.0.0.1:8000",
     provider=None,
+    secure_cookie=False,
+    session_idle_seconds=None,
 ) -> FastAPI:
     """Create the local app; security configuration is internal only.
 
@@ -165,6 +208,16 @@ def create_app(
     HTTP, and the default (``None``) is credential-free and
     disconnected (analysis/generation refuse as unavailable).
     """
+    if type(secure_cookie) is not bool:
+        raise ValueError("secure_cookie must be a bool")
+    if session_idle_seconds is not None:
+        if (
+            type(session_idle_seconds) not in (int, float)
+            or not math.isfinite(session_idle_seconds)
+            or session_idle_seconds <= 0
+        ):
+            raise ValueError(
+                "session_idle_seconds must be positive and finite or None")
     hosts = frozenset(allowed_hosts)
     sessions: dict[str, _SessionState] = {}
     # Single authority for session admission, in-flight/provider
@@ -186,6 +239,78 @@ def create_app(
                       "generation": 0, "next_operation": 0}
     closed_generations = set()
     operations = {}
+    _idle_header_value = (
+        None if session_idle_seconds is None
+        else str(session_idle_seconds))
+
+    def purge_expired():
+        """Drop idle-expired sessions that no owner still holds.
+
+        Candidates are snapshotted under the registry and then
+        rechecked state-lock-first (never waiting on a state lock
+        while holding the registry), so busy, renewed, replaced,
+        HTTP-pinned, operation-owned, or otherwise reserved
+        sessions are skipped rather than force-deleted.
+        """
+        if session_idle_seconds is None:
+            return
+        now = _session_now()
+        with registry_lock:
+            candidates = [
+                (session_id, state)
+                for session_id, state in sessions.items()
+                if now - state.last_seen >= session_idle_seconds
+            ]
+        for session_id, state in candidates:
+            if not state.lock.acquire(blocking=False):
+                continue
+            try:
+                workspace = state.workspace
+                if workspace is not None:
+                    requests = workspace.snapshot().requests
+                    entries = (
+                        requests.values()
+                        if isinstance(requests, dict) else requests)
+                    working = False
+                    for entry in entries:
+                        if isinstance(entry, dict):
+                            status = entry.get(
+                                "status", entry.get("state"))
+                        elif isinstance(entry, str):
+                            status = entry
+                        else:
+                            status = getattr(entry, "status", None)
+                            if status is None:
+                                status = getattr(entry, "state", None)
+                        if status == "working":
+                            working = True
+                            break
+                    if working:
+                        continue
+                with registry_lock:
+                    if sessions.get(session_id) is not state:
+                        continue
+                    if (
+                        _session_now() - state.last_seen
+                        < session_idle_seconds
+                    ):
+                        continue
+                    if state.active_http:
+                        continue
+                    if (
+                        state.worker_reservations
+                        or state.provider_contexts
+                        or state.terminal_reserves
+                    ):
+                        continue
+                    if any(
+                        operation.get("state") is state
+                        for operation in operations.values()
+                    ):
+                        continue
+                    del sessions[session_id]
+            finally:
+                state.lock.release()
 
     def shutdown_provider_executor(generation, executor):
         # Runs in a threadpool thread, never on an event loop and
@@ -353,6 +478,74 @@ def create_app(
                 status_code=400, content={"detail": "invalid host"})
         return await call_next(request)
 
+    class _HostedSessionMiddleware:
+        """Pin the cookie session for the full inner ASGI call."""
+
+        def __init__(self, app):
+            self.app = app
+
+        async def __call__(self, scope, receive, send):
+            if scope.get("type") != "http":
+                await self.app(scope, receive, send)
+                return
+            request = Request(scope)
+            if request.headers.get("host") not in hosts:
+                response = JSONResponse(
+                    status_code=400, content={"detail": "invalid host"})
+                await response(scope, receive, send)
+                return
+            path = scope.get("path", "")
+            if (
+                path != "/api/session"
+                and not path.startswith("/api/session/")
+            ):
+                await self.app(scope, receive, send)
+                return
+            session_id = request.cookies.get(SESSION_COOKIE, "")
+            with registry_lock:
+                state = sessions.get(session_id)
+                if state is not None:
+                    state.active_http += 1
+                    state.last_seen = _session_now()
+            if state is None:
+                response = JSONResponse(
+                    status_code=401,
+                    content={"detail": "session required"})
+                await response(scope, receive, send)
+                return
+            scope_state = scope.setdefault("state", {})
+            scope_state[_SESSION_PINNED_STATE_KEY] = state
+
+            async def send_with_idle_header(message):
+                if (
+                    message.get("type") == "http.response.start"
+                    and _idle_header_value is not None
+                ):
+                    headers = [
+                        (key, value)
+                        for key, value in message.get("headers", [])
+                        if key.lower() != b"x-session-idle-seconds"
+                    ]
+                    headers.append((
+                        b"x-session-idle-seconds",
+                        _idle_header_value.encode("latin-1")))
+                    message = {**message, "headers": headers}
+                await send(message)
+
+            token = _HOSTED_THREADPOOL_DRAIN.set(True)
+            try:
+                await self.app(scope, receive, send_with_idle_header)
+            finally:
+                _HOSTED_THREADPOOL_DRAIN.reset(token)
+                if scope_state.get(_SESSION_PINNED_STATE_KEY) is state:
+                    del scope_state[_SESSION_PINNED_STATE_KEY]
+                with registry_lock:
+                    state.active_http -= 1
+                    state.last_seen = _session_now()
+
+    if session_idle_seconds is not None:
+        app.add_middleware(_HostedSessionMiddleware)
+
     def check_origin(request):
         if request.headers.get("origin") != allowed_origin:
             refuse(403, "forbidden origin")
@@ -360,11 +553,21 @@ def create_app(
     def session_for(request):
         check_host(request)
         session_id = request.cookies.get(SESSION_COOKIE, "")
+        if session_idle_seconds is None:
+            with registry_lock:
+                state = sessions.get(session_id)
+            if state is None:
+                refuse(401, "session required")
+            return state
+        scope_state = request.scope.get("state")
+        pinned = (
+            scope_state.get(_SESSION_PINNED_STATE_KEY)
+            if isinstance(scope_state, dict) else None)
         with registry_lock:
-            state = sessions.get(session_id)
-        if state is None:
+            current = sessions.get(session_id)
+        if pinned is None or current is not pinned:
             refuse(401, "session required")
-        return state
+        return pinned
 
     def check_mutation(request, state):
         check_origin(request)
@@ -532,7 +735,7 @@ def create_app(
         session_id = secrets.token_urlsafe(32)
         state = _SessionState(
             csrf_token=secrets.token_urlsafe(32),
-            lock=threading.Lock())
+            lock=threading.Lock(), last_seen=_session_now())
         try:
             initial_cost = session_graph_cost(
                 state.csrf_token, None, None, None, {}, {})
@@ -540,10 +743,18 @@ def create_app(
             refuse(413, "request too large")
         # Build (render) the actual response, cookie included,
         # before publishing the session into the registry.
-        response = prepared_json(201, {"csrf_token": state.csrf_token})
+        payload = {"csrf_token": state.csrf_token}
+        if session_idle_seconds is not None:
+            payload["session_idle_seconds"] = session_idle_seconds
+        response = prepared_json(201, payload)
+        if session_idle_seconds is not None:
+            response.headers["X-Session-Idle-Seconds"] = (
+                str(session_idle_seconds))
         response.set_cookie(
             SESSION_COOKIE, session_id, httponly=True,
-            samesite="strict", path="/api")
+            secure=secure_cookie, samesite="strict", path="/api")
+        if session_idle_seconds is not None:
+            purge_expired()
         with registry_lock:
             if len(sessions) >= MAX_SESSIONS:
                 refuse(503, "session limit reached")
@@ -1291,14 +1502,16 @@ def create_app(
             envelope=envelope,
             omit_raw=code == "retained_budget_exceeded")
 
-    def reserve_operation(context):
+    def reserve_operation(context, state):
         """Reserve a slot and register its full operation at once.
 
         Closure, capacity and generation/executor binding are
         decided under the one registry lock, so an operation
         cannot register into a lifetime that has closed. The
         registration now covers admission before any binding
-        or provider context publication exists.
+        or provider context publication exists. The owning
+        session state is registered with the operation so its
+        session cannot idle-expire while the operation lives.
         """
         with registry_lock:
             if executor_state["closed"]:
@@ -1312,6 +1525,7 @@ def create_app(
                 "generation": executor_state["generation"],
                 "executor": provider_executor,
                 "context": context,
+                "state": state,
                 "settled": threading.Event(),
                 "handler_done": False,
                 "callable_returned": False,
@@ -1422,7 +1636,7 @@ def create_app(
         # One deadline from before admission/queue entry through
         # dispatch, provider wait, preparation and publication.
         context = ProviderCallContext(PROVIDER_TIMEOUT_SECONDS)
-        operation = reserve_operation(context)
+        operation = reserve_operation(context, state)
         if operation is None:
             refuse(429, "too many provider requests")
         binding = None
@@ -1540,6 +1754,16 @@ def create_app(
                 except Exception:
                     pass
                 raise
+            except UsageDenied as error:
+                code = error.code
+                if not isinstance(code, str) or code not in {
+                        "usage_exhausted", "usage_window_closed",
+                        "usage_rate_limited",
+                        "usage_accounting_unavailable"}:
+                    code = "usage_accounting_unavailable"
+                return await run_owned(
+                    terminalize_request, state, binding, "error",
+                    503, code)
             except MetaProtocolError as error:
                 outcome = _meta_error_outcome(error)
                 status = (504 if outcome == "timeout"

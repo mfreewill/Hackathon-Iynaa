@@ -1,6 +1,9 @@
 # Hackathon Iynaa — Arabic page-to-lesson teacher demo
 
-A standalone local demonstration for adult teachers.
+A standalone demonstration for adult teachers.
+It runs locally by default.
+An optional hostname-bound hosted launcher is also supported.
+See [docs/HOSTING.md](docs/HOSTING.md).
 
 The teacher supplies one Arabic textbook page.
 The application proposes source sections from that page.
@@ -11,7 +14,7 @@ Only questions the teacher explicitly approves reach the preview.
 This is a separate implementation built around the pre-existing
 Iynaa product idea and prior educational experience.
 It is not a publication of private Iynaa code.
-It is a teacher-only local workspace, not a released child-facing
+It is a teacher-only workspace, not a released child-facing
 service.
 The project repository is
 [github.com/mfreewill/Hackathon-Iynaa](https://github.com/mfreewill/Hackathon-Iynaa).
@@ -86,20 +89,30 @@ page.
   for page understanding and source-grounded question drafting.
   Diagnostic metadata is bounded and value-free.
   Error messages do not echo caller text or credentials.
-- The server listens on IPv4 loopback by default.
-  Workspace state is in memory for the running process only.
-  There is no database, durable storage, student account system, or
-  container requirement.
+- Both launchers listen on IPv4 loopback only.
+  Uploaded pages, reviewed text, drafts, decisions, and preview
+  state live in the running process memory only.
+  They are not written to disk.
+  The one durable exception is optional hosted usage accounting.
+  It stores metadata only in a local SQLite file: the fixed
+  policy, the spent attempt count, the last attempt start, and
+  whether the window has closed.
+  It stores no keys, page content, or drafts.
+  No external database service, student account system, or
+  container is required.
 - SAM is not part of the final runtime.
 
 ## Source and test map
 
 - `launch.py` — local launcher for the loopback teacher workspace.
+- `hosted_launch.py` — optional hostname-bound hosted launcher.
+  See [docs/HOSTING.md](docs/HOSTING.md).
 - `example_offline.py` — provider-free offline journey covering
   provisional questions, approval, and invalidation after an edit.
 - `src/teacher_demo/` — teacher domain, source and versioned
-  question protocols, page decoding, HTTP application, and the
-  Meta protocol, stream, transport, and HTTP modules.
+  question protocols, page decoding, HTTP application, hosted
+  usage accounting, and the Meta protocol, stream, transport, and
+  HTTP modules.
 - `src/teacher_demo/static/` — the Arabic right-to-left browser
   client: `index.html`, `workspace.css`, `workspace.js`,
   `review.js`, and `review-render.js`.
@@ -117,7 +130,9 @@ page.
 ## Requirements
 
 - Python 3.11.
-  The measurements in this README were recorded on Python 3.11.15.
+  The historical baseline measurements in
+  [docs/VERIFICATION.md](docs/VERIFICATION.md) were recorded on
+  Python 3.11.15.
 - To run the local application, install `requirements.txt`.
   It directly pins FastAPI, Starlette, Pillow, pypdfium2, and
   Uvicorn.
@@ -257,24 +272,44 @@ issues, or logs.
 Starting the process makes no model request and is not by itself
 evidence of a live Meta result.
 
+### Optional hosted mode
+
+Hosted mode is separate from the local default above.
+The local launcher stays disconnected unless Meta mode is
+explicit, as described in the two subsections above.
+The optional hosted launcher serves the same teacher flow for
+one exact public hostname, still on loopback behind an HTTPS
+reverse proxy.
+Its disconnected default also makes no model request.
+Hosted Meta mode additionally requires the finite usage ledger
+described in [docs/HOSTING.md](docs/HOSTING.md).
+Support for hosted mode in this source does not mean a public
+endpoint is active.
+
+In hosted mode, the session expires after a configured period
+without HTTP activity.
+Typing that sends no request does not renew it.
+Active server work is retained.
+The browser confirmation window is conservative.
+It may withdraw current approvals and the preview while a long
+or stalled response is still pending.
+Displayed drafts and read-only context remain visible locally.
+An explicit reload starts again and may lose unsaved work.
+There is no automatic retry, cancellation, or heartbeat.
+Local mode has no hosted idle lease.
+
 ## Measured evidence
 
 Full scope and limits are recorded in
 [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
-- On the editorial public-code copy, using Python 3.11.15, the
-  root test command above passed the complete same 367 ordinary
-  test methods, with 0 failures, 0 errors, and 0 skips.
-  That run preserved unchanged executable behavior and made no
-  new model call.
-  The verification report states the exact attribution and scope.
-- Browser coverage was executed separately on the same user
-  interface and HTTP code: 17 groups, 45 method and fixture
-  invocations, and 31 distinct methods, using synthetic test
-  providers.
-  It is not part of the 367-test root result.
-- One genuine Meta AI demonstration completed the source and question
-  requests with HTTP 201 responses.
+- Root and browser counts for the first public-code baseline are
+  recorded as historical results in
+  [docs/VERIFICATION.md](docs/VERIFICATION.md).
+  They are not current hosted totals and are not repeated here as
+  moving latest numbers.
+- One genuine Meta AI demonstration completed the source and
+  question requests with HTTP 201 responses.
   It produced six draft questions.
   Four received provisional model-assisted developer approval, two
   were rejected for cognitive fit, and four items remained in the
@@ -285,21 +320,23 @@ Those results do not certify transcription accuracy, Bloom level,
 grade fit, Arabic accuracy, or professional teaching quality.
 The developer decisions in the genuine run were not human-teacher
 approval.
-Known nonblocking asynchronous-test and deprecation warnings mean
-the recorded logs were not clean.
+Known nonblocking asynchronous-test and deprecation warnings in
+the baseline mean the recorded logs were not clean.
 
 ## Limitations
 
-- This is a standalone local demonstration, not a hosted service.
-  No deployment, demonstration video, or event submission is
-  claimed.
+- This source supports local use by default and an optional
+  hosted launcher.
+  That support does not claim a live public endpoint.
+  No demonstration video or event submission is claimed here.
 - One development page and one genuine run do not establish
   accuracy or calibration.
   Two of six drafts were rejected, so acceptance of all six Bloom
   levels is not claimed.
 - No professional human-teacher approval has been recorded.
-- In-memory work can be lost on page refresh, browser close, or
-  server restart.
+- In-memory workspace content can be lost on page refresh,
+  browser close, hosted session expiry, or server restart.
+  The hosted usage ledger does not back up workspace content.
 - Full-page analysis is not tight passage or region localization.
 - Generated content can be wrong or unsuitable and requires adult
   teacher review before any classroom use.
@@ -309,7 +346,8 @@ the recorded logs were not clean.
 - Use only textbook or other source material that the operator is
   entitled to process.
 - Do not add real keys, private uploads, student material, local
-  databases, logs, or generated TLS private keys to the repository.
+  databases, a hosted usage store, logs, or generated TLS private
+  keys to the repository.
 - The published fixtures are synthetic.
   No actual textbook page, teacher or student data, private log, or
   screenshot from the genuine run is included.

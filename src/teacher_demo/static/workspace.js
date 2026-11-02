@@ -68,6 +68,272 @@ const generationRetryWarning = document.querySelector(
 
 let csrfToken = null;
 let sessionPromise = null;
+// Hosted-session lease disclosure. No lease exists until a real
+// create response or a same-origin /api/session response header
+// supplies a validated positive idle limit; local runs without
+// either keep the pre-hosting behavior exactly. Typing, local
+// timers, unsent work and still-pending fetches never renew or
+// extend the lease: only receipt of a matching response bearing
+// a valid idle header (whatever its HTTP status) does, plus the
+// create body's policy anchored to its response receipt.
+let sessionExpired = false;
+let hostedLeaseSeconds = null;
+let hostedLeaseTimer = null;
+let hostedLeaseLastWallMs = 0;
+let hostedLeaseLastMonoMs = 0;
+const sessionExpiredCallbacks = [];
+const hostedLeaseReceipts = new WeakMap();
+
+function isSessionExpired() {
+  return sessionExpired;
+}
+
+function onSessionExpired(callback) {
+  sessionExpiredCallbacks.push(callback);
+  if (sessionExpired) {
+    callback();
+  }
+}
+
+function isSessionExpiredError(error) {
+  return error instanceof StageError
+    && error.status === 0
+    && error.detail === "session_expired"
+    && error.network === false
+    && error.unusableBody === false;
+}
+
+function sessionExpiredMessage() {
+  return "انقضت نافذة تأكيد جلسة الاستضافة، فلم يعد بالإمكان التحقق من حداثة العمل المعروض. يبقى ما هو ظاهر كما هو؛ وإعادة تحميل الصفحة صراحةً تبدأ من جديد وقد تُفقد الأعمال غير المحفوظة.";
+}
+
+function usageMessage(detail) {
+  const code = typeof detail === "string"
+    ? detail
+    : detail && typeof detail === "object"
+      ? (typeof detail.code === "string" ? detail.code
+        : typeof detail.detail === "string" ? detail.detail : "")
+      : "";
+  const messages = {
+    usage_exhausted:
+      "بُلغ حدّ الاستخدام المسموح لهذا التشغيل، فلم يُنشأ محتوى جديد من النموذج.",
+    usage_window_closed:
+      "أُغلقت نافذة الاستخدام المسموحة لهذا التشغيل، فلم يُنشأ محتوى جديد من النموذج.",
+    usage_rate_limited:
+      "توقّف مؤقت بسبب تقارب الطلبات أكثر من التباعد المسموح حاليًا، فلم يُنشأ محتوى جديد من النموذج الآن؛ لا يعني هذا وحده بلوغ حدّ الاستخدام الكلي.",
+    usage_accounting_unavailable:
+      "تعذّر التحقق من محاسبة الاستخدام لهذا التشغيل الآن، فلم يُنشأ محتوى جديد من النموذج؛ لا تؤكد هذه الرسالة بلوغ حدّ الاستخدام أو عدم بلوغه.",
+  };
+  return Object.prototype.hasOwnProperty.call(messages, code)
+    ? messages[code] : null;
+}
+
+function validHostedLeaseSeconds(value) {
+  const seconds = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim() !== ""
+      ? Number(value) : NaN;
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+function isHostedSessionPath(url) {
+  try {
+    const parsed = new URL(String(url), window.location.href);
+    return parsed.origin === window.location.origin
+      && (parsed.pathname === "/api/sessions"
+        || parsed.pathname === "/api/session"
+        || parsed.pathname.startsWith("/api/session/"));
+  } catch {
+    return false;
+  }
+}
+
+function formatHostedLeaseDuration(seconds) {
+  if (seconds >= 60 && seconds % 60 === 0) {
+    const minutes = seconds / 60;
+    if (minutes === 1) {
+      return "دقيقة واحدة";
+    }
+    if (minutes === 2) {
+      return "دقيقتين";
+    }
+    return minutes <= 10
+      ? `${minutes} دقائق` : `${minutes} دقيقة`;
+  }
+  if (seconds === 1) {
+    return "ثانية واحدة";
+  }
+  if (seconds === 2) {
+    return "ثانيتين";
+  }
+  return seconds > 2 && seconds <= 10
+    ? `${seconds} ثوانٍ` : `${seconds} ثانية`;
+}
+
+function hostedLeaseElapsedMs() {
+  // Conservative for sleep/resume and wall-clock jumps: whichever
+  // clock has advanced further is the elapsed idle time.
+  return Math.max(
+    Date.now() - hostedLeaseLastWallMs,
+    performance.now() - hostedLeaseLastMonoMs);
+}
+
+function clearHostedLeaseTimer() {
+  if (hostedLeaseTimer !== null) {
+    clearTimeout(hostedLeaseTimer);
+    hostedLeaseTimer = null;
+  }
+}
+
+function scheduleHostedLeaseTimer() {
+  clearHostedLeaseTimer();
+  if (sessionExpired || hostedLeaseSeconds === null) {
+    return;
+  }
+  const remainingMs = hostedLeaseSeconds * 1000
+    - hostedLeaseElapsedMs();
+  hostedLeaseTimer = setTimeout(
+    checkHostedLeaseExpiry, Math.max(0, remainingMs));
+}
+
+function checkHostedLeaseExpiry() {
+  if (sessionExpired) {
+    return true;
+  }
+  if (hostedLeaseSeconds === null) {
+    return false;
+  }
+  if (hostedLeaseElapsedMs() < hostedLeaseSeconds * 1000) {
+    scheduleHostedLeaseTimer();
+    return false;
+  }
+  // A still-pending fetch proves nothing about server ownership,
+  // so it never defers withdrawal past the confirmed deadline.
+  expireHostedSession();
+  return true;
+}
+
+function renderHostedSessionNotice() {
+  const notice = document.querySelector(
+    '[data-testid="hosted-session-notice"]');
+  if (!notice || hostedLeaseSeconds === null) {
+    return;
+  }
+  notice.textContent =
+    `عمل مؤقت في جلسة مستضافة: تنتهي الجلسة بعد ${formatHostedLeaseDuration(hostedLeaseSeconds)} دون وصول أي طلب إلى الخادم؛ الكتابة دون إرسال طلب لا تجدّد الجلسة.`;
+  notice.hidden = false;
+}
+
+function hostedLeaseReceipt(response) {
+  return response
+    && (typeof response === "object"
+      || typeof response === "function")
+    ? hostedLeaseReceipts.get(response) : undefined;
+}
+
+function renewHostedLease(receipt) {
+  if (sessionExpired || hostedLeaseSeconds === null) {
+    return;
+  }
+  hostedLeaseLastWallMs = receipt ? receipt.wallMs : Date.now();
+  hostedLeaseLastMonoMs = receipt
+    ? receipt.monoMs : performance.now();
+  renderHostedSessionNotice();
+  scheduleHostedLeaseTimer();
+}
+
+function adoptHostedLeaseFromSessionCreate(data, response) {
+  if (!data || typeof data !== "object" || sessionExpired) {
+    return;
+  }
+  const seconds = validHostedLeaseSeconds(data.session_idle_seconds);
+  if (seconds === null) {
+    return;
+  }
+  if (checkHostedLeaseExpiry()) {
+    return;
+  }
+  // Anchor to the create Response receipt recorded by
+  // sessionFetch, never to this later body-parsing moment. The
+  // closing check withdraws at once if that receipt's window
+  // already elapsed while the body was being read.
+  hostedLeaseSeconds = seconds;
+  renewHostedLease(hostedLeaseReceipt(response));
+  checkHostedLeaseExpiry();
+}
+
+function noteHostedLeaseResponse(response) {
+  // The previous confirmed deadline is checked first, so a late
+  // response can never renew over an already elapsed window or
+  // heal sticky expiry. A valid header then renews whatever the
+  // HTTP status; a missing or invalid header renews nothing.
+  if (!response || checkHostedLeaseExpiry()) {
+    return;
+  }
+  const headerSeconds = validHostedLeaseSeconds(
+    response.headers && typeof response.headers.get === "function"
+      ? response.headers.get("X-Session-Idle-Seconds") : null);
+  if (headerSeconds === null) {
+    return;
+  }
+  hostedLeaseSeconds = headerSeconds;
+  renewHostedLease(hostedLeaseReceipt(response));
+}
+
+function expireHostedSession() {
+  if (sessionExpired || hostedLeaseSeconds === null) {
+    return;
+  }
+  // Sticky until reload: no new session is created here, the CSRF
+  // token and all displayed work stay exactly as they are, and no
+  // uncertain-outcome state is entered (that would hide source).
+  sessionExpired = true;
+  clearHostedLeaseTimer();
+  const expiredNotice = document.querySelector(
+    '[data-testid="hosted-session-expired"]');
+  if (expiredNotice) {
+    expiredNotice.textContent = sessionExpiredMessage();
+    expiredNotice.hidden = false;
+  }
+  notifyBusy();
+  for (const callback of [...sessionExpiredCallbacks]) {
+    callback();
+  }
+}
+
+async function sessionFetch(url, options = {}, stage = "session") {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD"
+      && checkHostedLeaseExpiry()) {
+    throw new StageError(stage, 0, "session_expired", false);
+  }
+  const matching = isHostedSessionPath(url);
+  try {
+    const response = await fetch(url, options);
+    if (matching) {
+      hostedLeaseReceipts.set(response, {
+        wallMs: Date.now(),
+        monoMs: performance.now(),
+      });
+      noteHostedLeaseResponse(response);
+    }
+    return response;
+  } finally {
+    if (matching) {
+      checkHostedLeaseExpiry();
+    }
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    checkHostedLeaseExpiry();
+  }
+});
+window.addEventListener("pageshow", () => {
+  checkHostedLeaseExpiry();
+});
+
 let pending = false;
 let hasCommittedSource = false;
 let committedSourceId = null;
@@ -97,9 +363,11 @@ let lastSettledOperation = null;
 // currentness flag. A settings-reason withdrawal still permits
 // the deliberate correction send, and Start never asks this.
 function standaloneSettingsPermitted() {
-  return standaloneSettingsPermissionCallbacks.every(
-    (callback) => callback() === true);
+  return !isSessionExpired()
+    && standaloneSettingsPermissionCallbacks.every(
+      (callback) => callback() === true);
 }
+
 
 function renderStandaloneSettingsControl() {
   if (!settingsApplyButton) {
@@ -107,18 +375,21 @@ function renderStandaloneSettingsControl() {
   }
   const busy = queuedMutations > 0 || pending;
   settingsApplyButton.disabled = outcomeUncertain || busy
-    || !standaloneSettingsPermitted();
+    || isSessionExpired() || !standaloneSettingsPermitted();
 }
+
 
 function notifyBusy() {
   const busy = queuedMutations > 0 || pending;
-  primaryButton.disabled = outcomeUncertain || busy;
+  primaryButton.disabled = outcomeUncertain || busy
+    || isSessionExpired();
   renderStandaloneSettingsControl();
   renderOperationControls();
   for (const callback of busyCallbacks) {
     callback(busy);
   }
 }
+
 
 function runSerialized(task) {
   queuedMutations += 1;
@@ -168,6 +439,10 @@ function isUncertainOutcome(error) {
   }
   if (!(error instanceof StageError)) {
     return true;
+  }
+  // A locally refused no-send is definite: nothing was sent.
+  if (isSessionExpiredError(error)) {
+    return false;
   }
   if (error.network || error.unusableBody) {
     return true;
@@ -229,20 +504,37 @@ async function readDetail(response) {
 }
 
 async function readJsonBody(stage, response) {
+  let result;
   try {
-    return await response.json();
+    result = await response.json();
   } catch {
     throw new StageError(stage, response.status, null, false, true);
   }
+  // A body can complete after the confirmed deadline while the
+  // expiry timer has not run yet. Evaluate the deadline now so
+  // sticky withdrawal precedes any callback or snapshot
+  // adoption. The successfully read body itself stays the known
+  // outcome: expiry never turns it into a no-send/network error.
+  checkHostedLeaseExpiry();
+  return result;
 }
 
 async function apiFetch(stage, url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD"
+      && checkHostedLeaseExpiry()) {
+    throw new StageError(stage, 0, "session_expired", false);
+  }
   const sourceIdAtSend = committedSourceId;
   const generationAtSend = uiGeneration;
   let response;
   try {
-    response = await fetch(url, { credentials: "same-origin", ...options });
-  } catch {
+    response = await sessionFetch(
+      url, { credentials: "same-origin", ...options }, stage);
+  } catch (error) {
+    if (isSessionExpiredError(error)) {
+      throw error;
+    }
     throw new StageError(stage, 0, null, true);
   }
   if (!response.ok) {
@@ -255,23 +547,45 @@ async function apiFetch(stage, url, options = {}) {
   return response;
 }
 
+
 async function fetchResponse(stage, url, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD"
+      && checkHostedLeaseExpiry()) {
+    throw new StageError(stage, 0, "session_expired", false);
+  }
   try {
-    return await fetch(url, { credentials: "same-origin", ...options });
-  } catch {
+    return await sessionFetch(
+      url, { credentials: "same-origin", ...options }, stage);
+  } catch (error) {
+    if (isSessionExpiredError(error)) {
+      throw error;
+    }
     throw new StageError(stage, 0, null, true);
   }
 }
 
+
 async function getJson(path) {
-  const response = await fetch(path, { credentials: "same-origin" });
+  const response = await sessionFetch(path, { credentials: "same-origin" });
   if (!response.ok) {
     throw new Error("readback failed");
   }
-  return response.json();
+  const result = await response.json();
+  // Same body boundary as readJsonBody: evaluate the confirmed
+  // deadline after the successful parse so sticky withdrawal
+  // precedes caller adoption, while the body itself is returned
+  // unchanged as the known readback.
+  checkHostedLeaseExpiry();
+  return result;
 }
 
+
 function ensureSession() {
+  if (sessionExpired) {
+    return Promise.reject(
+      new StageError("session", 0, "session_expired", false));
+  }
   if (csrfToken) {
     return Promise.resolve(csrfToken);
   }
@@ -288,6 +602,7 @@ function ensureSession() {
         throw new StageError(
           "session", response.status, null, false, true);
       }
+      adoptHostedLeaseFromSessionCreate(data, response);
       csrfToken = data.csrf_token;
       return csrfToken;
     })().catch((error) => {
@@ -297,6 +612,7 @@ function ensureSession() {
   }
   return sessionPromise;
 }
+
 
 function mutationHeaders(extra = {}) {
   return { "X-CSRF-Token": csrfToken, ...extra };
@@ -316,6 +632,9 @@ function clearSetupError() {
 }
 
 function setupStageMessage(error) {
+  if (isSessionExpiredError(error)) {
+    return sessionExpiredMessage();
+  }
   if (error.status === 401 || error.status === 403) {
     return SESSION_MESSAGE;
   }
@@ -342,6 +661,9 @@ function setupStageMessage(error) {
 }
 
 function analysisMessage(error) {
+  if (isSessionExpiredError(error)) {
+    return sessionExpiredMessage();
+  }
   if (error.network) {
     return "تعذّر الاتصال بالخادم المحلي أثناء طلب التحليل. لم نُعد المحاولة تلقائيًا؛ تبقى الصفحة المعلنة كما هي، وحالة طلب التحليل نفسه غير مؤكدة.";
   }
@@ -351,6 +673,10 @@ function analysisMessage(error) {
   const code = detailCode(error);
   if (error.status === 503 && code === "provider_unavailable") {
     return UNAVAILABLE_MESSAGE;
+  }
+  const usage = error.unusableBody ? null : usageMessage(error.detail);
+  if (usage) {
+    return usage;
   }
   const phrase = outcomePhrase(code);
   if (phrase) {
@@ -376,6 +702,7 @@ function analysisMessage(error) {
   }
   return "لم يكتمل طلب التحليل ولم يُقترح أيّ مقطع أو سؤال. تبقى صفحتك وإعداداتك كما هي.";
 }
+
 
 function updateReplacementWarning() {
   // Every Start destructively replaces the workspace, so the
@@ -468,9 +795,17 @@ function outcomePhrase(outcome) {
   return OUTCOME_PHRASES[outcome] || null;
 }
 
-function closedOperationStatus(outcome) {
+function closedOperationStatus(outcome, detail = null) {
   if (outcome === "cancelled") {
     return OPERATION_CANCELLED;
+  }
+  // Detail reaches here only from the validated exact terminal
+  // envelope, so a closed usage code names the budget cause
+  // before the generic outcome phrase. Never inferred from the
+  // HTTP status or the outcome alone.
+  const usage = usageMessage(detail);
+  if (usage) {
+    return `أُغلق الطلب. ${usage} الحالة المعروضة هي آخر حالة مؤكدة من الخادم.`;
   }
   const phrase = outcomePhrase(outcome);
   return phrase
@@ -626,9 +961,10 @@ function renderOperationControls() {
   }
   operationGroup.hidden = false;
   operationStatus.textContent = display.statusText || "";
+  const expired = isSessionExpired();
   const active = display === activeProviderOperation && !display.settled;
   const controlsDisabled = !active || !display.sent
-    || display.controlInFlight;
+    || display.controlInFlight || expired;
   if (operationCancelButton) {
     operationCancelButton.hidden = !active;
     operationCancelButton.disabled = controlsDisabled;
@@ -637,7 +973,8 @@ function renderOperationControls() {
     operationCheckButton.hidden = !active;
     operationCheckButton.disabled = controlsDisabled;
   }
-  const canRetry = Boolean(!activeProviderOperation
+  const canRetry = Boolean(!expired
+    && !activeProviderOperation
     && display.kind === "source" && display.settled
     && !display.discarded && display.result
     && display.result.type !== "success"
@@ -666,12 +1003,14 @@ function renderOperationControls() {
   }
 }
 
+
 // Synchronous claim: a rapid second activation finds the first
 // operation already owning the provider lane and sends nothing.
 function claimProviderOperation(kind, sourceId) {
   if ((kind !== "source" && kind !== "questions") || !sourceId
       || outcomeUncertain || activeProviderOperation
-      || sourceId !== committedSourceId) {
+      || sourceId !== committedSourceId
+      || checkHostedLeaseExpiry()) {
     return null;
   }
   let resolveLogical;
@@ -703,6 +1042,7 @@ function claimProviderOperation(kind, sourceId) {
   return operation;
 }
 
+
 function settleOperation(operation, result, statusText) {
   operation.settled = true;
   operation.result = result;
@@ -722,6 +1062,32 @@ async function reconcileAndSettle(operation, evidence) {
   }
   operation.reconciling = true;
   try {
+    if (checkHostedLeaseExpiry()) {
+      const succeeded = evidence.outcome === "ok";
+      let lateStatus;
+      if (succeeded) {
+        lateStatus =
+          "اكتمل الطلب، لكن لم تُطبَّق نتيجته على هذا العرض.";
+      } else if (evidence.outcome === "cancelled") {
+        lateStatus = OPERATION_CANCELLED;
+      } else {
+        const usage = usageMessage(evidence.detail ?? null);
+        const phrase = outcomePhrase(evidence.outcome);
+        lateStatus = usage
+          ? `أُغلق الطلب. ${usage} لم تُطبَّق نتيجته على هذا العرض.`
+          : phrase
+            ? `أُغلق الطلب: ${phrase}؛ لم تُطبَّق نتيجته على هذا العرض.`
+            : "أُغلق الطلب دون اكتمال ناجح؛ لم تُطبَّق نتيجته على هذا العرض.";
+      }
+      settleOperation(operation, {
+        type: succeeded ? "success" : "terminal",
+        outcome: evidence.outcome,
+        snapshot: evidence.snapshot,
+        httpStatus: evidence.httpStatus ?? 0,
+        detail: evidence.detail ?? null,
+      }, lateStatus);
+      return true;
+    }
     let adopted = false;
     for (const callback of providerSnapshotCallbacks) {
       adopted = await callback({
@@ -748,12 +1114,14 @@ async function reconcileAndSettle(operation, evidence) {
       httpStatus: evidence.httpStatus ?? 0,
       detail: evidence.detail ?? null,
     }, succeeded ? OPERATION_SUCCEEDED
-      : closedOperationStatus(evidence.outcome));
+      : closedOperationStatus(
+          evidence.outcome, evidence.detail ?? null));
     return true;
   } finally {
     operation.reconciling = false;
   }
 }
+
 
 function classifyOriginalResponse(operation, status, body, readable) {
   if (!operationOwnsUi(operation)) {
@@ -823,13 +1191,22 @@ function classifyOriginalResponse(operation, status, body, readable) {
 async function executeProviderOperation(operation) {
   if (!operation || operation !== activeProviderOperation
       || operation.settled || operation.sent || outcomeUncertain
-      || operation.sourceId !== committedSourceId) {
+      || operation.sourceId !== committedSourceId
+      || checkHostedLeaseExpiry()) {
     return { type: "aborted" };
   }
-  await ensureSession();
+  try {
+    await ensureSession();
+  } catch (error) {
+    if (isSessionExpiredError(error)) {
+      return { type: "aborted" };
+    }
+    throw error;
+  }
   if (operation !== activeProviderOperation || operation.settled
       || operation.sent || outcomeUncertain
       || operation.sourceId !== committedSourceId
+      || checkHostedLeaseExpiry()
       || !providerSendPermitted(
         operation.kind, operation.sourceId)) {
     return { type: "aborted" };
@@ -853,7 +1230,15 @@ async function executeProviderOperation(operation) {
             source_id: operation.sourceId,
           }),
         });
-    } catch {
+    } catch (error) {
+      if (isSessionExpiredError(error)) {
+        if (!operation.settled) {
+          operation.sent = false;
+          setOperationStatus(operation, sessionExpiredMessage());
+          operation.resolveLogical({ type: "aborted" });
+        }
+        return;
+      }
       markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
       return;
     }
@@ -870,6 +1255,7 @@ async function executeProviderOperation(operation) {
   original.catch(() => {});
   return operation.logicalPromise;
 }
+
 
 function finishProviderOperation(operation) {
   if (!operation) {
@@ -923,7 +1309,8 @@ async function reconcileFromSnapshotRead(operation) {
 async function checkActiveOperation() {
   const operation = activeProviderOperation;
   if (!operation || operation.settled || !operation.sent
-      || operation.controlInFlight || outcomeUncertain) {
+      || operation.controlInFlight || outcomeUncertain
+      || checkHostedLeaseExpiry()) {
     return;
   }
   operation.controlInFlight = true;
@@ -934,15 +1321,17 @@ async function checkActiveOperation() {
       return;
     }
     await ensureSession();
-    if (!operationOwnsUi(operation)) {
+    if (checkHostedLeaseExpiry() || !operationOwnsUi(operation)) {
       return;
     }
     let response;
     try {
       response = await fetchResponse("provider-status",
         `/api/session/requests/${encodeURIComponent(operation.requestId)}/status?source_id=${encodeURIComponent(operation.sourceId)}`);
-    } catch {
-      markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
+    } catch (error) {
+      if (!isSessionExpiredError(error)) {
+        markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
+      }
       return;
     }
     let body = null;
@@ -976,8 +1365,8 @@ async function checkActiveOperation() {
     operation.closureKnown = true;
     operation.closureOutcome = entry.outcome;
     await reconcileFromSnapshotRead(operation);
-  } catch {
-    if (operationOwnsUi(operation)) {
+  } catch (error) {
+    if (!isSessionExpiredError(error) && operationOwnsUi(operation)) {
       markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
     }
   } finally {
@@ -986,17 +1375,19 @@ async function checkActiveOperation() {
   }
 }
 
+
 async function cancelActiveOperation() {
   const operation = activeProviderOperation;
   if (!operation || operation.settled || !operation.sent
-      || operation.controlInFlight || outcomeUncertain) {
+      || operation.controlInFlight || outcomeUncertain
+      || checkHostedLeaseExpiry()) {
     return;
   }
   operation.controlInFlight = true;
   renderOperationControls();
   try {
     await ensureSession();
-    if (!operationOwnsUi(operation)) {
+    if (checkHostedLeaseExpiry() || !operationOwnsUi(operation)) {
       return;
     }
     let response;
@@ -1008,8 +1399,10 @@ async function cancelActiveOperation() {
             { "Content-Type": "application/json" }),
           body: JSON.stringify({ source_id: operation.sourceId }),
         });
-    } catch {
-      markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
+    } catch (error) {
+      if (!isSessionExpiredError(error)) {
+        markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
+      }
       return;
     }
     let body = null;
@@ -1044,8 +1437,8 @@ async function cancelActiveOperation() {
     // have won, or admission may not have happened yet; only an
     // exact Check can decide. Nothing here certifies closure.
     markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
-  } catch {
-    if (operationOwnsUi(operation)) {
+  } catch (error) {
+    if (!isSessionExpiredError(error) && operationOwnsUi(operation)) {
       markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
     }
   } finally {
@@ -1053,6 +1446,7 @@ async function cancelActiveOperation() {
     renderOperationControls();
   }
 }
+
 
 function adoptSource(metadata) {
   uiGeneration += 1;
@@ -1073,6 +1467,9 @@ function adoptSource(metadata) {
 }
 
 function analysisResultMessage(result) {
+  if (checkHostedLeaseExpiry()) {
+    return sessionExpiredMessage();
+  }
   if (result.type === "success") {
     return RECEIVED_MESSAGE;
   }
@@ -1127,7 +1524,7 @@ async function putSettingsAcknowledged(
 }
 
 async function startAnalysis() {
-  if (pending || outcomeUncertain) {
+  if (pending || outcomeUncertain || checkHostedLeaseExpiry()) {
     return;
   }
   clearSetupError();
@@ -1162,6 +1559,10 @@ async function startAnalysis() {
   statusLine.textContent = "جارٍ تجهيز الصفحة وبدء التحليل…";
   try {
     await putSettingsAcknowledged(grade, objective);
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+      return;
+    }
     const startResponse = await apiFetch(
       "start", `/api/session/start?page_index=${pageIndex}`, {
         method: "POST",
@@ -1174,9 +1575,19 @@ async function startAnalysis() {
       throw new StageError(
         "start", startResponse.status, null, false, true);
     }
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent =
+        "وصل إقرار بدء جديد بعد انتهاء نافذة التأكيد، فلم يُعتمد مصدره في هذا العرض ولم تُمسّ الصفحة والمسودات المعروضة. "
+        + sessionExpiredMessage();
+      return;
+    }
     adoptSource(metadata);
     for (const callback of sourceStartedCallbacks) {
       await callback(metadata);
+    }
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+      return;
     }
     statusLine.textContent = "جارٍ طلب تحليل المصدر…";
     // The acknowledged Start above is the only destructive step.
@@ -1186,18 +1597,27 @@ async function startAnalysis() {
     analysisOperation = claimProviderOperation(
       "source", metadata.source_id);
     if (!analysisOperation) {
+      if (isSessionExpired()) {
+        statusLine.textContent = sessionExpiredMessage();
+        return;
+      }
       throw new StageError("analysis", 0, null, false, true);
     }
     const analysisResult = await executeProviderOperation(
       analysisOperation);
-    if (analysisResult.type !== "aborted"
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+    } else if (analysisResult.type !== "aborted"
         && analysisOperation.generation === uiGeneration
         && !outcomeUncertain
         && committedSourceId === metadata.source_id) {
       statusLine.textContent = analysisResultMessage(analysisResult);
     }
   } catch (error) {
-    if (error instanceof StageError && error.stage === "analysis") {
+    if (isSessionExpiredError(error)) {
+      statusLine.textContent = sessionExpiredMessage();
+    } else if (error instanceof StageError
+        && error.stage === "analysis") {
       statusLine.textContent = analysisMessage(error);
     } else if (isUncertainOutcome(error)) {
       enterUncertainOutcome();
@@ -1216,6 +1636,7 @@ async function startAnalysis() {
   }
 }
 
+
 // Standalone grade/objective save: the same acknowledged
 // settings PUT, without a file, page or destructive Start. It
 // never sends Start, source analysis or generation, runs in the
@@ -1226,7 +1647,8 @@ let settingsSaveQueued = false;
 async function saveSettingsOnly() {
   // Queued-action checkpoint: sticky identity may have been
   // withdrawn while this save waited in the serialized lane.
-  if (pending || outcomeUncertain || !standaloneSettingsPermitted()) {
+  if (pending || outcomeUncertain || checkHostedLeaseExpiry()
+      || !standaloneSettingsPermitted()) {
     return;
   }
   clearSetupError();
@@ -1246,16 +1668,22 @@ async function saveSettingsOnly() {
   statusLine.textContent = "جارٍ حفظ الصف والهدف…";
   try {
     const acknowledged = await putSettingsAcknowledged(
-      grade, objective, () => standaloneSettingsPermitted());
+      grade, objective,
+      () => !checkHostedLeaseExpiry() && standaloneSettingsPermitted());
     if (!acknowledged) {
-      statusLine.textContent = previousStatus;
+      statusLine.textContent = isSessionExpired()
+        ? sessionExpiredMessage() : previousStatus;
       return;
     }
-    if (!outcomeUncertain) {
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+    } else if (!outcomeUncertain) {
       statusLine.textContent = "حُفظ الصف والهدف.";
     }
   } catch (error) {
-    if (isUncertainOutcome(error)) {
+    if (isSessionExpiredError(error)) {
+      statusLine.textContent = sessionExpiredMessage();
+    } else if (isUncertainOutcome(error)) {
       enterUncertainOutcome();
     } else if (error instanceof StageError) {
       statusLine.textContent = previousStatus;
@@ -1268,6 +1696,7 @@ async function saveSettingsOnly() {
     notifyBusy();
   }
 }
+
 
 if (settingsApplyButton) {
   settingsApplyButton.addEventListener("click", () => {
@@ -1547,6 +1976,11 @@ export const workspace = {
   isUncertainOutcome,
   enterUncertainOutcome,
   isOutcomeUncertain: () => outcomeUncertain,
+  isSessionExpired,
+  onSessionExpired,
+  isSessionExpiredError,
+  sessionExpiredMessage,
+  usageMessage,
   setStatus: (text) => { statusLine.textContent = text; },
   onUncertain: (callback) => { uncertainCallbacks.push(callback); },
   onSourceStarted: (callback) => {

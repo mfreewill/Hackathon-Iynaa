@@ -467,12 +467,133 @@ def _net_install_operation_wrappers():
     _NET_WRAPPERS_INSTALLED = True
 
 
+# -- Linux no-argument socketpair bootstrap ---------------------------
+# Declared seam: the module attribute ``socket.socketpair`` only, and
+# only its exact no-argument call. Installed once at first guard
+# activation; imports stay inert and neither socket class changes.
+
+_NET_IS_LINUX = sys.platform.startswith("linux")
+_NET_SOCKETPAIR_TIMEOUT = 5.0
+_NET_ORIGINAL_SOCKETPAIR = None
+_NET_SOCKETPAIR_INSTALLED = False
+
+
+def _net_tcp_socketpair():
+    """Genuine numeric IPv4 TCP pair via guarded public operations."""
+    listener = None
+    client = None
+    server = None
+    try:
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        listener.settimeout(_NET_SOCKETPAIR_TIMEOUT)
+        port = listener.getsockname()[1]
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.settimeout(_NET_SOCKETPAIR_TIMEOUT)
+        client.connect(("127.0.0.1", port))
+        server, _peer = listener.accept()
+        listener.close()
+        listener = None
+        if (
+            server.getpeername() != client.getsockname()
+            or client.getpeername() != server.getsockname()
+        ):
+            raise OSError("socketpair peer verification failed")
+        client.settimeout(None)
+        server.settimeout(None)
+        client.set_inheritable(False)
+        server.set_inheritable(False)
+        pair = (client, server)
+        client = None
+        server = None
+        return pair
+    except BaseException:
+        for sock in (server, client, listener):
+            if sock is not None:
+                try:
+                    sock.close()
+                except Exception:
+                    pass
+        raise
+
+
+def _net_socketpair_explicit_allowed(args, kwargs):
+    names = ("family", "type", "proto")
+    if len(args) > 3:
+        return True
+    values = {}
+    for index, value in enumerate(args):
+        values[names[index]] = value
+    for key, value in kwargs.items():
+        if key not in names or key in values:
+            return True
+        values[key] = value
+    family = values.get("family", -1)
+    type_value = values.get("type", socket.SOCK_STREAM)
+    proto = values.get("proto", 0)
+    family_int = _net_int(family)
+    proto_int = _net_int(proto)
+    if (
+        family_int is None
+        or proto_int is None
+        or _net_int(type_value) is None
+    ):
+        return True
+    if family_int != int(socket.AF_INET):
+        return False
+    if not _net_is_stream(type_value):
+        return False
+    return proto_int in (0, int(socket.IPPROTO_TCP))
+
+
+def _net_socketpair_wrapper(*args, **kwargs):
+    original = _NET_ORIGINAL_SOCKETPAIR
+    if original is None:
+        raise RuntimeError("socketpair wrapper has no original")
+    if not _NET_IS_LINUX:
+        return original(*args, **kwargs)
+    mode = _net_effective_mode()
+    if mode is None:
+        return original(*args, **kwargs)
+    if not args and not kwargs:
+        if mode == "refuse-all":
+            _net_raise_refusal("socket.socketpair")
+        return _net_tcp_socketpair()
+    if mode == "refuse-all":
+        _net_raise_refusal("socket.socketpair")
+    if not _net_socketpair_explicit_allowed(args, kwargs):
+        _net_raise_refusal("socket.socketpair")
+    return original(*args, **kwargs)
+
+
+def _net_install_socketpair_wrapper():
+    global _NET_ORIGINAL_SOCKETPAIR, _NET_SOCKETPAIR_INSTALLED
+    if _NET_SOCKETPAIR_INSTALLED:
+        return
+    original = getattr(socket, "socketpair", None)
+    if original is None or not callable(original):
+        _NET_SOCKETPAIR_INSTALLED = True
+        return
+    if original is _net_socketpair_wrapper:
+        _NET_SOCKETPAIR_INSTALLED = True
+        return
+    _NET_ORIGINAL_SOCKETPAIR = original
+    socket.socketpair = _net_socketpair_wrapper
+    _NET_SOCKETPAIR_INSTALLED = True
+
+
 def _ensure_network_audit_hook():
     global _NET_HOOK_INSTALLED
-    if _NET_HOOK_INSTALLED and _NET_WRAPPERS_INSTALLED:
+    if (
+        _NET_HOOK_INSTALLED
+        and _NET_WRAPPERS_INSTALLED
+        and _NET_SOCKETPAIR_INSTALLED
+    ):
         return
     with _NET_INSTALL_LOCK:
         _net_install_operation_wrappers()
+        _net_install_socketpair_wrapper()
         if not _NET_HOOK_INSTALLED:
             sys.addaudithook(_network_audit_hook)
             _NET_HOOK_INSTALLED = True
@@ -1107,6 +1228,8 @@ def _main(argv):
     if handler is None:
         _err("fixture mode is unknown\n")
         return 64
+    if argv[1] not in ("real_child", "real_guarded"):
+        _install_socket_guard(allow_loopback=False, mark_violations=False)
     result = handler(argv[2:])
     return 0 if result is None else int(result)
 

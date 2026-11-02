@@ -42,8 +42,9 @@ const GENERATION_CANCELLED =
 // Generation context wrapper around the one shared outcome
 // phrase owner in workspace.js; cancelled keeps its pinned text
 // above, and an unknown outcome falls back to GENERATION_TERMINAL.
-function generationTerminalText(outcome) {
-  const phrase = workspace.outcomePhrase(outcome);
+function generationTerminalText(outcome, detail) {
+  const phrase = workspace.usageMessage(detail)
+    || workspace.outcomePhrase(outcome);
   return phrase
     ? `لم يكتمل توليد الأسئلة: ${phrase}، ولم تُعتمد أي أسئلة جديدة. بقيت مراجعة المصدر كما هي.`
     : GENERATION_TERMINAL;
@@ -614,6 +615,19 @@ function slotText(entry, level, outcome) {
   if (outcome === "draft") {
     return `${bloom}: وصلت مسودة`;
   }
+  if (outcome === "pending") {
+    // request_state is the exact owning questions request's
+    // state, joined by renderSlotOutcomes; anything else is
+    // unconfirmed rather than an inferred closure.
+    if (entry.request_state === "working") {
+      return `${bloom}: بانتظار نتيجة طلب التوليد`;
+    }
+    if (entry.request_state === "terminal"
+        || entry.request_state === "superseded") {
+      return `${bloom}: أُغلق طلب التوليد دون نتيجة لهذا المستوى`;
+    }
+    return `${bloom}: حالة نتيجة هذا المستوى غير مؤكدة`;
+  }
   const reason = [entry.abstain_reason, entry.reason, entry.message]
     .find((value) => typeof value === "string" && value) || "";
   if (outcome === "abstain" || outcome === "abstained") {
@@ -628,6 +642,22 @@ function renderSlotOutcomes(entries) {
     const level = entry.level ?? entry.bloom_level
       ?? entry.current_level ?? "";
     const outcome = entry.outcome ?? entry.status ?? "";
+    // A pending slot's text follows its exact owning questions
+    // request in the current snapshot, joined by request_id and
+    // kind only; the row's data-outcome stays "pending"
+    // whatever that owner state is.
+    let requestState = null;
+    if (String(outcome) === "pending") {
+      const requestId = requestIdOf(entry);
+      const owner = requestId
+        ? requestEntries(currentSnapshot).find((request) =>
+          request && typeof request === "object"
+          && request.request_id === requestId
+          && request.kind === "questions")
+        : null;
+      requestState = owner && typeof owner.state === "string"
+        ? owner.state : null;
+    }
     const row = document.createElement("div");
     row.dataset.testid = "slot-outcome";
     row.dataset.slotId = String(entry.slot_id ?? "");
@@ -635,7 +665,9 @@ function renderSlotOutcomes(entries) {
     row.dataset.outcome = String(outcome);
     const text = document.createElement("span");
     text.dataset.testid = "slot-outcome-text";
-    text.textContent = slotText(entry, String(level), String(outcome));
+    text.textContent = slotText(
+      { ...entry, request_state: requestState },
+      String(level), String(outcome));
     row.append(text);
     return row;
   });
@@ -779,8 +811,10 @@ function renderView() {
     questions.map((question) => [question.question_id, question]));
   currencyStatus.hidden = reviewCurrency.current || !snapshot
     || workspace.isOutcomeUncertain();
-  currencyStatus.textContent = reviewCurrency.reason === "identity"
-    ? IDENTITY_CURRENCY_STATUS_TEXT : CURRENCY_STATUS_TEXT;
+  currencyStatus.textContent = reviewCurrency.reason === "lease"
+    ? workspace.sessionExpiredMessage()
+    : reviewCurrency.reason === "identity"
+      ? IDENTITY_CURRENCY_STATUS_TEXT : CURRENCY_STATUS_TEXT;
   // The stage indicator follows adopted work only: committed
   // regions, then questions, then a current approved preview.
   let stageIndex = 0;
@@ -892,6 +926,18 @@ function adoptSnapshot(snapshot, options = {}) {
   if (activeSourceId && snapshot.source_id !== activeSourceId) {
     return false;
   }
+  if (workspace.isSessionExpired()
+      || reviewCurrency.reason === "lease") {
+    // A late same-source acknowledgment after sticky lease
+    // expiry keeps the last-known snapshot, keyed drafts and
+    // open editors exactly as displayed. Its owner may still
+    // acknowledge exact closure, but this snapshot is not
+    // applied here and currentness is not restored.
+    reviewCurrency.current = false;
+    reviewCurrency.reason = "lease";
+    renderView();
+    return false;
+  }
   const old = currentSnapshot;
   const dirtyRegions = new Set();
   const dirtyQuestions = new Set();
@@ -955,6 +1001,17 @@ function adoptSnapshot(snapshot, options = {}) {
 }
 
 function clearReviewForSource(sourceId) {
+  if (workspace.isSessionExpired()
+      || reviewCurrency.reason === "lease") {
+    // A late acknowledged Start cannot heal sticky lease expiry
+    // or erase the displayed source, keyed drafts or open
+    // editors. Keep that last-known work readable and
+    // noncurrent; only an explicit reload starts anew.
+    reviewCurrency.current = false;
+    reviewCurrency.reason = "lease";
+    renderView();
+    return;
+  }
   activeSourceId = sourceId;
   currentSnapshot = null;
   selectedRegionId = null;
@@ -1064,7 +1121,9 @@ function providerSendPermitted(info) {
 // open. This is a pure query of the one owner above; rendering
 // and notification never recurse through it.
 function standaloneSettingsPermitted() {
-  return reviewCurrency.reason !== "identity";
+  return reviewCurrency.reason !== "identity"
+    && reviewCurrency.reason !== "lease"
+    && !workspace.isSessionExpired();
 }
 
 // A definite refusal that invalidates this page's session/source
@@ -1086,12 +1145,30 @@ function handleIdentityInvalidatingRefusal(info) {
     return;
   }
   reviewCurrency.current = false;
-  reviewCurrency.reason = "identity";
+  if (workspace.isSessionExpired()
+      || reviewCurrency.reason === "lease") {
+    // Sticky lease expiry outranks a later identity refusal:
+    // replacing it with the source-start-clearable identity
+    // reason would unblock expiry.
+    reviewCurrency.reason = "lease";
+  } else {
+    reviewCurrency.reason = "identity";
+  }
   renderView();
 }
 
 async function handleSettingsAcknowledged(settings) {
   if (!workspace.hasCommittedSource() || workspace.isOutcomeUncertain()) {
+    return;
+  }
+  if (workspace.isSessionExpired()
+      || reviewCurrency.reason === "lease") {
+    // A late settings acknowledgment cannot heal sticky lease
+    // expiry, start a follow-on snapshot read, or reset the
+    // retained snapshot and unsent drafts.
+    reviewCurrency.current = false;
+    reviewCurrency.reason = "lease";
+    renderView();
     return;
   }
   const expectedSourceId = workspace.currentSourceId() || activeSourceId;
@@ -1110,7 +1187,8 @@ async function handleSettingsAcknowledged(settings) {
   // Withdraw currentness synchronously, before any await, and show
   // that withdrawal now. The retained snapshot is left unmutated.
   reviewCurrency.current = false;
-  if (reviewCurrency.reason !== "identity") {
+  if (reviewCurrency.reason !== "identity"
+      && reviewCurrency.reason !== "lease") {
     reviewCurrency.reason = "settings";
   }
   reviewCurrency.acknowledgedSettings = {
@@ -1123,8 +1201,11 @@ async function handleSettingsAcknowledged(settings) {
     snapshot = null;
   }
   if (workspace.isOutcomeUncertain()
+      || workspace.isSessionExpired()
       || workspace.currentSourceId() !== expectedSourceId
       || activeSourceId !== expectedSourceId) {
+    // Expiry during the read leaves the read completion
+    // read-only: never adopt it as current state.
     return;
   }
   const acknowledged = reviewCurrency.acknowledgedSettings;
@@ -1279,6 +1360,9 @@ async function sendSnapshotMutation(
 }
 
 function definiteMessage(error, fallback) {
+  if (workspace.isSessionExpiredError(error)) {
+    return workspace.sessionExpiredMessage();
+  }
   const status = error?.status;
   if (status === 401 || status === 403) {
     return SESSION_MESSAGE;
@@ -1548,6 +1632,7 @@ function generationDefiniteMessage(status) {
 function handleGenerate() {
   const expectedSourceId = currentSnapshot?.source_id;
   if (!expectedSourceId || !reviewCurrency.current
+      || workspace.isSessionExpired()
       || workspace.isOutcomeUncertain()
       || !currentSnapshot.can_generate
       || hasWorkingRequest(currentSnapshot)) {
@@ -1564,6 +1649,11 @@ function handleGenerate() {
   let outcome = "aborted";
   void workspace.runSerialized(async () => {
     try {
+      // Queue-boundary recheck: expiry while this claim waited
+      // makes it unsendable before any session or provider send.
+      if (workspace.isSessionExpired()) {
+        throw ABORTED;
+      }
       await workspace.ensureSession();
       assertSendable(expectedSourceId);
       if (!currentSnapshot.can_generate
@@ -1575,7 +1665,8 @@ function handleGenerate() {
       const ownsUi = operation.generation
           === workspace.currentGeneration()
         && activeSourceId === expectedSourceId
-        && !workspace.isOutcomeUncertain();
+        && !workspace.isOutcomeUncertain()
+        && !workspace.isSessionExpired();
       if (result.type === "success") {
         outcome = "success";
         if (ownsUi) {
@@ -1586,7 +1677,8 @@ function handleGenerate() {
         if (ownsUi) {
           workspace.setStatus(result.outcome === "cancelled"
             ? GENERATION_CANCELLED
-            : generationTerminalText(result.outcome));
+            : generationTerminalText(
+              result.outcome, result.detail));
         }
       } else if (result.type === "refusal") {
         outcome = "definite";
@@ -1608,7 +1700,8 @@ function handleGenerate() {
     // operation must not steal it back.
     if (operation.generation !== workspace.currentGeneration()
         || activeSourceId !== expectedSourceId
-        || workspace.isOutcomeUncertain()) {
+        || workspace.isOutcomeUncertain()
+        || workspace.isSessionExpired()) {
       return;
     }
     if (outcome === "success") {
@@ -1632,6 +1725,16 @@ workspace.onIdentityInvalidatingRefusal(
   handleIdentityInvalidatingRefusal);
 workspace.onStandaloneSettingsPermission(standaloneSettingsPermitted);
 workspace.onUncertain(handleUncertain);
+workspace.onSessionExpired(() => {
+  // Sticky lease withdrawal in the one currentness owner only:
+  // displayed source, keyed drafts and open editors stay
+  // readable as last-known work. Nothing is cleared, settled,
+  // cancelled or resent here; renderView withdraws current
+  // approval/preview and locks new writes.
+  reviewCurrency.current = false;
+  reviewCurrency.reason = "lease";
+  renderView();
+});
 generateButton?.addEventListener("click", handleGenerate);
 previewReturn?.addEventListener("click", () => {
   workspace.showWork();

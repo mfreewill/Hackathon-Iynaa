@@ -12,7 +12,8 @@
   <p class="non-durable-warning" data-testid="non-durable-warning">مساحة تجريبية غير محفوظة: قد يؤدي تحديث الصفحة أو إغلاقها أو إعادة التشغيل إلى فقدان هذا العمل.</p>
   <p class="hosted-session-notice" data-testid="hosted-session-notice" role="status" aria-live="polite" hidden></p>
   <p class="hosted-session-expired" data-testid="hosted-session-expired" role="status" aria-live="polite" hidden></p>
-  <p class="workspace-status" data-testid="workspace-status" role="status" aria-live="polite">أكمل إعداد الصفحة ثم اضغط «بدء تحليل الصفحة».</p>
+  <p class="boot-error" data-testid="review-boot-error" role="alert" hidden></p>
+  <p class="workspace-status" data-testid="workspace-status" role="status" aria-live="polite">جارٍ تجهيز جلسة المتصفح ووحدة المراجعة…</p>
 </header>
 
 <div class="pane-switch" data-testid="pane-switch" role="tablist" aria-label="تبديل العرض">
@@ -20,34 +21,36 @@
   <button type="button" role="tab" id="pane-tab-work" data-testid="pane-tab-work" aria-selected="true" aria-controls="work-pane">العمل</button>
 </div>
 
-<section class="review-stage" data-testid="provider-operation" aria-labelledby="provider-operation-heading" hidden>
-  <h2 id="provider-operation-heading">طلب خدمة التحليل والتوليد</h2>
-  <p class="workspace-status" data-testid="provider-operation-status" role="status" aria-live="polite"></p>
-  <p class="replacement-warning" data-testid="provider-retry-warning" hidden>قد يستمرّ الطلب السابق لدى المزوّد وقد يُحتسب استخدامه؛ إعادة المحاولة تبدأ طلبًا جديدًا.</p>
-  <div class="item-actions">
-    <button class="secondary-action" type="button" data-testid="provider-operation-cancel" hidden disabled>إلغاء الطلب</button>
-    <button class="secondary-action" type="button" data-testid="provider-operation-check" hidden disabled>التحقق من حالة الطلب</button>
-    <button class="secondary-action" type="button" data-testid="provider-operation-retry" hidden disabled>إعادة طلب تحليل المصدر</button>
-  </div>
-</section>
-
 <main class="workspace">
-  <section class="pane work-pane" data-testid="work-pane" id="work-pane" aria-labelledby="setup-heading">
+  <section class="pane work-pane" data-testid="work-pane" id="work-pane" data-active-step="setup" aria-labelledby="setup-heading">
     <ol class="stages" aria-label="مراحل مساحة العمل">
-      <li class="stage stage-current" aria-current="step">١ إعداد الصفحة</li>
-      <li class="stage">٢ مراجعة المصدر</li>
-      <li class="stage">٣ مراجعة الأسئلة</li>
-      <li class="stage">٤ معاينة المعلم</li>
+      <li class="stage stage-current"><button type="button" data-testid="workflow-nav-setup" aria-current="step">١ إعداد الصفحة</button></li>
+      <li class="stage"><button type="button" data-testid="workflow-nav-source">٢ مراجعة المصدر</button></li>
+      <li class="stage"><button type="button" data-testid="workflow-nav-questions">٣ مراجعة الأسئلة</button></li>
+      <li class="stage"><button type="button" data-testid="workflow-nav-preview">٤ معاينة المعلم</button></li>
     </ol>
 
-    <h1 id="setup-heading">١ إعداد الصفحة</h1>
+    <section class="review-stage provider-operation" data-testid="provider-operation" aria-labelledby="provider-operation-heading" hidden>
+      <h2 id="provider-operation-heading">طلب خدمة التحليل والتوليد</h2>
+      <p class="workspace-status" data-testid="provider-operation-status" role="status" aria-live="polite"></p>
+      <p class="replacement-warning" data-testid="provider-retry-warning" hidden>قد يستمرّ الطلب السابق لدى المزوّد وقد يُحتسب استخدامه؛ إعادة المحاولة تبدأ طلبًا جديدًا.</p>
+      <div class="item-actions">
+        <button class="secondary-action" type="button" data-testid="provider-operation-cancel" hidden disabled>إلغاء الطلب</button>
+        <button class="secondary-action" type="button" data-testid="provider-operation-check" hidden disabled>التحقق من حالة الطلب</button>
+        <button class="secondary-action" type="button" data-testid="provider-operation-retry" hidden disabled>إعادة طلب تحليل المصدر</button>
+      </div>
+    </section>
+
+    <section class="workflow-step" data-workflow-step="setup" aria-labelledby="setup-heading">
+    <h1 id="setup-heading" tabindex="-1">١ إعداد الصفحة</h1>
 
     <form data-testid="setup-form" id="setup-form" novalidate>
       <p class="rights-note" data-testid="rights-note">استخدم صفحة يحقّ لك استخدامها في هذا النموذج التجريبي. لا يتحقّق هذا النموذج من الحقوق ولا يمنح تصريحًا.</p>
 
       <div class="field">
         <label for="page-file">ملف صفحة المصدر</label>
-        <input id="page-file" name="page-file" type="file" accept="image/png,image/jpeg,application/pdf">
+        <input id="page-file" name="page-file" type="file" accept="image/png,image/jpeg,application/pdf" aria-describedby="page-file-hint">
+        <small class="hint" id="page-file-hint">اختر الملف، ثم حدّد صفحة واحدة منه بالأسفل؛ لن يُحلَّل الملف أو الكتاب كاملًا.</small>
       </div>
 
       <div class="field">
@@ -63,50 +66,61 @@
 
       <div class="field">
         <label for="page-number">رقم الصفحة</label>
-        <input id="page-number" name="page-number" type="number" min="1" step="1" inputmode="numeric" value="1">
+        <input id="page-number" name="page-number" type="number" min="1" step="1" inputmode="numeric" value="1" aria-describedby="page-number-hint">
+        <small class="hint" id="page-number-hint">هذا ترتيب الصفحة داخل الملف بدءًا من ١، وليس الرقم المطبوع على الصفحة.</small>
       </div>
 
       <p class="setup-error" data-testid="setup-error" role="alert" hidden></p>
-      <p class="replacement-warning" data-testid="replacement-warning" hidden>الضغط على «بدء تحليل الصفحة» مجددًا سيستبدل مساحة العمل الحالية في هذه الجلسة — مقاطعها وأسئلتها وقراراتها ومعاينتها — ويبدأ فارغًا، حتى لو اخترت الملف والصفحة نفسيهما.</p>
+      <p class="replacement-warning" data-testid="replacement-warning" hidden>الضغط على «تهيئة الصفحة» مجددًا سيستبدل مساحة العمل الحالية في هذه الجلسة — مقاطعها وأسئلتها وقراراتها ومعاينتها — ويبدأ فارغًا، حتى لو اخترت الملف والصفحة نفسيهما.</p>
       <p class="replacement-warning" data-testid="settings-impact-warning">حفظ صف أو هدف جديد يؤثّر في كل الأسئلة المعتمدة المولّدة: ستحتاج إلى مراجعة وتحديث قبل اعتمادها من جديد، دون حذف أي محتوى أو عمل محفوظ.</p>
       <div class="setup-actions">
-        <button class="secondary-action" type="button" data-testid="settings-apply">حفظ الصف والهدف</button>
-        <button class="primary-action" type="submit">بدء تحليل الصفحة</button>
+        <button class="secondary-action" type="button" data-testid="settings-apply" disabled>حفظ الصف والهدف</button>
+        <button class="primary-action" type="submit" data-testid="prepare-page" disabled>تهيئة الصفحة</button>
+      </div>
+      <p class="setup-action-status" data-testid="setup-action-status" role="status" aria-live="polite">جارٍ تجهيز جلسة المتصفح ووحدة المراجعة…</p>
+      <div class="prepared-page" data-testid="prepared-page" hidden>
+        <p class="selected-file-page-note" data-testid="selected-file-page-note"></p>
+        <button class="primary-action" type="button" data-testid="confirm-page" hidden disabled>تحليل هذه الصفحة</button>
       </div>
     </form>
 
-    <p class="future-stages-note" data-testid="future-stages-note">تبدأ مراجعة المصدر عند وصول مقاطع من التحليل، وتظهر الأسئلة والمعاينة بعد خطوات المراجعة.</p>
+    <p class="future-stages-note" data-testid="future-stages-note">بعد تهيئة الصفحة ورؤية صورتها في المصدر، يبدأ التحليل فقط عند الضغط على «تحليل هذه الصفحة».</p>
+    </section>
 
-    <section class="review-stage" data-testid="stage-source-review" aria-labelledby="source-review-heading">
+    <section class="review-stage workflow-step" data-testid="stage-source-review" data-workflow-step="source" aria-labelledby="source-review-heading" hidden>
       <h2 id="source-review-heading" tabindex="-1">٢ مراجعة المصدر</h2>
       <p class="review-empty" data-testid="source-review-empty">تبدأ مراجعة المصدر عند وصول مقاطع من التحليل.</p>
       <p class="source-model-line">النموذج: <bdi class="technical-value" data-testid="source-model-name">اسم النموذج غير متاح بعد</bdi></p>
+      <div class="source-review-notes" data-testid="source-review-notes">ملاحظات مراجعة المصدر غير متاحة بعد.</div>
+      <p class="source-page-continuation" data-testid="source-page-continuation">استمرارية الصفحة كما أوردها النموذج غير متاحة بعد.</p>
       <div class="region-list" data-testid="region-list"></div>
       <p class="source-counts" data-testid="source-counts"></p>
       <p class="generate-gate-status" data-testid="generate-gate-status"></p>
       <button class="primary-action" id="generate-questions" type="button" disabled>اعتماد المصدر وتوليد الأسئلة</button>
+      <p class="generation-action-status" data-testid="generation-action-status" role="status" aria-live="polite"></p>
       <p class="replacement-warning" data-testid="generation-retry-warning" hidden>قد يستمرّ الطلب السابق لدى المزوّد وقد يُحتسب استخدامه؛ إعادة المحاولة تبدأ طلبًا جديدًا.</p>
     </section>
 
-    <section class="review-stage" data-testid="stage-question-review" aria-labelledby="question-review-heading">
+    <section class="review-stage workflow-step" data-testid="stage-question-review" data-workflow-step="questions" aria-labelledby="question-review-heading" hidden>
       <h2 id="question-review-heading" tabindex="-1">٣ مراجعة الأسئلة</h2>
       <p class="review-empty" data-testid="question-review-empty">تظهر الأسئلة هنا بعد توليد ناجح.</p>
+      <div class="question-request-summaries" data-testid="question-request-summaries"></div>
       <div class="slot-outcomes" data-testid="slot-outcomes"></div>
       <div class="question-list" data-testid="question-list"></div>
     </section>
 
-    <section class="review-stage" data-testid="stage-teacher-preview" aria-labelledby="teacher-preview-heading">
+    <section class="review-stage workflow-step" data-testid="stage-teacher-preview" data-workflow-step="preview" aria-labelledby="teacher-preview-heading" hidden>
       <h2 id="teacher-preview-heading" tabindex="-1">٤ معاينة المعلم</h2>
       <p class="teacher-preview-warning" data-testid="teacher-preview-warning">معاينة للمعلم فقط — ليست نشرًا للطلاب ولا اعتمادًا تربويًا نهائيًا.</p>
       <p class="preview-empty" data-testid="preview-empty">لا أسئلة معتمدة حاليًا؛ اعتمد سؤالًا من مراجعة الأسئلة لتظهر هنا.</p>
-      <button class="secondary-action" type="button" data-testid="preview-return">عودة إلى مراجعة الأسئلة</button>
+      <button class="secondary-action" type="button" data-testid="preview-return" disabled>عودة إلى مراجعة الأسئلة</button>
       <div class="preview-list" data-testid="preview-list"></div>
     </section>
   </section>
 
   <section class="pane source-pane" data-testid="source-pane" id="source-pane" aria-labelledby="source-heading">
     <h2 id="source-heading" tabindex="-1">صفحة المصدر</h2>
-    <p class="source-empty" data-testid="source-empty">لم تُبدأ صفحة بعد. ستظهر هنا معاينة الصفحة التي يسلّمها الخادم بعد بدء ناجح.</p>
+    <p class="source-empty" data-testid="source-empty">لم تُهيَّأ صفحة بعد. ستظهر هنا معاينة صفحة الملف التي يسلّمها الخادم بعد تهيئة ناجحة.</p>
     <div class="source-reference" data-testid="source-reference" hidden>
       <figure class="source-figure">
         <img data-testid="source-preview" alt="معاينة صفحة المصدر">
@@ -141,6 +155,5 @@
 </main>
 
 <script type="module" src="/assets/workspace.js"></script>
-<script type="module" src="/assets/review.js"></script>
 </body>
 </html>

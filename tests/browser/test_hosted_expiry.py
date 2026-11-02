@@ -119,6 +119,7 @@ class HostedSessionExpiryBrowserTests(unittest.TestCase):
             self.assertEqual(
                 [entry["question_id"] for entry in preview],
                 [approved["question_id"]])
+            helper.tid(page, "workflow-nav-preview").click()
             expect(
                 page.get_by_test_id("stage-teacher-preview")
             ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
@@ -139,10 +140,17 @@ class HostedSessionExpiryBrowserTests(unittest.TestCase):
             other_card = helper.question_card(page, ack_other)
             region_b_item = helper.region_item(page, region_b)
             mark_before_drafts = len(helper.requests_log)
+            helper.tid(page, "preview-return").click()
+            expect(
+                page.get_by_test_id("stage-question-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             helper.open_question_editor(other_card).fill(
                 UNSENT_QUESTION_WORDING)
-            helper.tid(
-                region_b_item, "region-current-text-input").fill(
+            helper.tid(page, "workflow-nav-source").click()
+            expect(
+                page.get_by_test_id("stage-source-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
+            helper.open_region_editor(region_b_item).fill(
                 UNSENT_REGION_TEXT)
             self.assertEqual(
                 helper.mutations_since(mark_before_drafts), [])
@@ -174,6 +182,14 @@ class HostedSessionExpiryBrowserTests(unittest.TestCase):
                 objective_input.input_value(), fx["OBJECTIVE"])
             self.assertEqual(page_number_input.input_value(), "1")
             settled_url = page.url
+
+            # Show Preview while it is still available: expiry
+            # must preserve this active step so its empty
+            # noncurrent message stays visible afterwards.
+            helper.tid(page, "workflow-nav-preview").click()
+            expect(
+                page.get_by_test_id("stage-teacher-preview")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
 
             # Settle every real outstanding response, then make no
             # context/API request at all: DOM waits only from here.
@@ -222,9 +238,17 @@ class HostedSessionExpiryBrowserTests(unittest.TestCase):
             ).to_contain_text(
                 "غير مؤكدة", timeout=ASSERT_TIMEOUT_MS)
 
+            # DOM-only local navigation back to questions; no
+            # request may follow the settle checkpoint.
+            helper.tid(page, "preview-return").click()
+            expect(
+                page.get_by_test_id("stage-question-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
+
             # Displayed work stays readable and byte-identical:
-            # open drafts, question headings, source reference and
-            # the original setup inputs.
+            # the question editor and headings on this step, the
+            # region value in its hidden keyed node, the source
+            # reference and the original setup inputs.
             expect(
                 helper.tid(other_card, "question-edit-question")
             ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
@@ -267,19 +291,18 @@ class HostedSessionExpiryBrowserTests(unittest.TestCase):
                 objective_input.input_value(), fx["OBJECTIVE"])
             self.assertEqual(page_number_input.input_value(), "1")
 
-            # Every server-write control is withdrawn: Start,
+            # Every server-write control is withdrawn: Prepare,
             # standalone settings, generation, both region commits
             # and both question approvals (plus the open editor's
             # own commit).
-            expect(page.get_by_role(
-                "button", name="بدء تحليل الصفحة", exact=True)
+            expect(
+                helper.tid(page, "prepare-page")
             ).to_be_disabled(timeout=ASSERT_TIMEOUT_MS)
             expect(
                 helper.tid(page, "settings-apply")
             ).to_be_disabled(timeout=ASSERT_TIMEOUT_MS)
-            expect(page.get_by_role(
-                "button", name="اعتماد المصدر وتوليد الأسئلة",
-                exact=True)
+            expect(
+                page.locator('#generate-questions')
             ).to_be_disabled(timeout=ASSERT_TIMEOUT_MS)
             region_commits = page.get_by_test_id(
                 "region-review-commit")

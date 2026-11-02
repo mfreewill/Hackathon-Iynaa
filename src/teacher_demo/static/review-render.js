@@ -142,6 +142,8 @@ export function createRegionItem(region, callbacks) {
   const flags = el("ul", { className: "region-flags" });
   flagsWrap.append(flagsLabel, flags);
   const linkedWrap = el("div", { testId: "region-linked-questions" });
+  const currentText = el("p", {
+    className: "region-current-text", testId: "region-current-text" });
 
   const textInput = el("textarea", {
     testId: "region-current-text-input" });
@@ -185,13 +187,30 @@ export function createRegionItem(region, callbacks) {
   const evidence = button(
     "region-evidence-link", "إظهار الصفحة الكاملة",
     () => callbacks.onRegionEvidence(id));
+  // Read-mode default: acknowledged text, flags and the explicit
+  // inclusion choice/save stay visible. The optional text/label
+  // editor is a view-only disclosure owned here; its values stay
+  // the coordinator's keyed draft and the toggle sends nothing.
+  const editor = el("div", { className: "region-editor" });
+  editor.hidden = true;
+  editor.append(
+    labeledField("النص الحالي", textInput),
+    labeledField("التصنيف الحالي", labelInput));
+  const editToggle = button(
+    "region-edit", "تحرير النص والتصنيف", () => {
+      editor.hidden = !editor.hidden;
+      editToggle.setAttribute(
+        "aria-expanded", String(!editor.hidden));
+      if (!editor.hidden) {
+        textInput.focus();
+      }
+    });
+  editToggle.setAttribute("aria-expanded", "false");
   const form = el("div", { className: "review-form" });
   form.append(
-    labeledField("النص الحالي", textInput),
-    labeledField("التصنيف الحالي", labelInput),
-    labeledField("قرار التضمين", inclusionInput));
+    editor, labeledField("قرار التضمين", inclusionInput));
   const actions = el("div", { className: "item-actions" });
-  actions.append(commit, cancel, moveUp, moveDown, evidence);
+  actions.append(editToggle, commit, cancel, moveUp, moveDown, evidence);
   form.append(actions);
 
   const original = el("details", { testId: "region-original" });
@@ -201,9 +220,9 @@ export function createRegionItem(region, callbacks) {
   const rawLabel = el("span", { testId: "region-raw-label" });
   rawLabelLine.append("التصنيف الأصلي: ", rawLabel);
   original.append(summary, rawText, rawLabelLine);
-  node.append(heading, positionLine.line, inclusionState,
-    textAuthorLine.line, labelAuthorLine.line, requestIdLine.line,
-    modelLine.line, flagsWrap, linkedWrap, form, original);
+  node.append(heading, currentText, flagsWrap, inclusionState,
+    positionLine.line, textAuthorLine.line, labelAuthorLine.line,
+    requestIdLine.line, modelLine.line, linkedWrap, form, original);
 
   let linkedSignature = null;
   let linkedEntries = [];
@@ -222,6 +241,15 @@ export function createRegionItem(region, callbacks) {
     setModelName(text) {
       modelLine.value.textContent = text;
     },
+    // View-only: the coordinator calls this after an acknowledged
+    // Save or an explicit Cancel. Repaints never close the editor.
+    closeEditor() {
+      if (editor.contains(document.activeElement)) {
+        editToggle.focus();
+      }
+      editor.hidden = true;
+      editToggle.setAttribute("aria-expanded", "false");
+    },
     update(next, draft, locked, linkedQuestions, provenance,
         linkedStatusVisible = true) {
       record.locked = locked;
@@ -229,6 +257,9 @@ export function createRegionItem(region, callbacks) {
         provenance?.requestIdText ?? requestIdTextOf(next);
       modelLine.value.textContent = provenance?.modelName ?? UNAVAILABLE;
       heading.textContent = next.current_label;
+      // Acknowledged text only; uncommitted typing lives in the
+      // coordinator draft and the (possibly open) editor fields.
+      currentText.textContent = next.current_text;
       positionLine.value.textContent =
         Number.isFinite(next.display_position)
           ? arabicIndic(next.display_position) : "";
@@ -458,6 +489,10 @@ export function createQuestionCard(question, callbacks) {
   const cognitiveLine = metaLine(
     "التعليل المعرفي الحالي", "question-cognitive");
   const blocks = el("div", { className: "question-blocks" });
+  const draftStatus = el("p", {
+    className: "question-draft-status", testId: "question-draft-status",
+    attrs: { role: "status" } });
+  draftStatus.hidden = true;
   const evidenceWrap = el("div");
   evidenceWrap.append("الدليل: ");
   const orderWrap = el("div", { testId: "question-order" });
@@ -536,15 +571,38 @@ export function createQuestionCard(question, callbacks) {
     labeledField("الهدف الحالي", fields.objective),
     labeledField("مستوى بلوم الحالي", fields.level),
     editActions);
-  node.append(heading, statusLine.line, decision, author,
-    levelLine.line, gradeLine.line, objectiveLine.line,
+  // Supplementary current facts live behind one disclosure; the
+  // primary wording, Bloom level, guidance, author/decision and
+  // blocks stay readable before the actions. The original
+  // disclosure stays independently reachable after it.
+  const details = el("details", { testId: "question-details" });
+  details.append(
+    el("summary", { text: "تفاصيل السؤال ودليله" }),
+    gradeLine.line, objectiveLine.line,
     generationGradeLine.line, generationObjectiveLine.line,
-    requestIdLine.line, modelLine.line,
-    guidanceLine.line, cognitiveLine.line, blocks, evidenceWrap,
-    orderWrap, assumptionsWrap, criteriaWrap, original, actions,
-    editForm);
+    requestIdLine.line, modelLine.line, cognitiveLine.line,
+    evidenceWrap, orderWrap, assumptionsWrap, criteriaWrap);
+  node.append(heading, statusLine.line, decision, author,
+    levelLine.line, guidanceLine.line, blocks, draftStatus,
+    actions, details, original, editForm);
 
   let evidenceSignature = null;
+  // One gate writer for Approve: the coordinator lock, actual
+  // server blocks and the coordinator-computed dirty state. The
+  // renderer never recomputes dirtiness or overwrites typed
+  // field values; a clean open editor is not dirty by itself.
+  let gateLocked = false;
+  let gateBlocked = false;
+  let gateDirty = false;
+  function paintDraftStatus() {
+    draftStatus.hidden = !gateDirty;
+    draftStatus.textContent = gateDirty
+      ? "تعديلات غير محفوظة في هذا السؤال — احفظ التعديل أو ألغِه قبل الاعتماد."
+      : "";
+  }
+  function refreshApproveGate() {
+    approveButton.disabled = gateLocked || gateBlocked || gateDirty;
+  }
   const record = {
     node,
     heading,
@@ -563,13 +621,18 @@ export function createQuestionCard(question, callbacks) {
     closeEditor() {
       editForm.hidden = true;
     },
+    setDirtyState(dirty) {
+      gateDirty = Boolean(dirty);
+      paintDraftStatus();
+      refreshApproveGate();
+    },
     setModelName(text) {
       modelLine.value.textContent = text;
     },
     setOriginalMaterial(view) {
       paintOriginalMaterial(view);
     },
-    update(next, locked, provenance) {
+    update(next, locked, provenance, dirty = false) {
       heading.textContent = next.current_question;
       statusLine.value.textContent =
         STATUS_ARABIC[next.status] || next.status;
@@ -644,19 +707,21 @@ export function createQuestionCard(question, callbacks) {
             criterionList(next.create_rubric, callbacks));
         }
       }
-      // Decisions stay visible in every decided state; an actual
-      // backend block disables Approve in addition to the lock.
-      // This update is the only gate writer: read-only currency
-      // re-enables in review.js never touch the Approve control.
+      // Decisions stay visible in every decided state. Approve
+      // goes through the one gate writer combining the lock,
+      // actual backend blocks and the coordinator's dirty state;
+      // read-only currency re-enables in review.js never touch it.
       approveButton.hidden = false;
       rejectButton.hidden = false;
       for (const control of [editButton, approveButton, rejectButton,
           editCommit, editCancel, ...Object.values(fields)]) {
         control.disabled = locked;
       }
-      if ((next.blocks || []).length) {
-        approveButton.disabled = true;
-      }
+      gateLocked = Boolean(locked);
+      gateBlocked = (next.blocks || []).length > 0;
+      gateDirty = Boolean(dirty);
+      paintDraftStatus();
+      refreshApproveGate();
     },
   };
   return record;

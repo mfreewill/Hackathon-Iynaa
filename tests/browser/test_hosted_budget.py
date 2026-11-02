@@ -129,6 +129,10 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
             self.assertEqual(
                 [entry["question_id"] for entry in preview],
                 [approved["question_id"]])
+            helper.tid(page, "workflow-nav-preview").click()
+            expect(
+                page.get_by_test_id("stage-teacher-preview")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             preview_items = page.get_by_test_id("preview-item")
             expect(preview_items).to_have_count(
                 1, timeout=ASSERT_TIMEOUT_MS)
@@ -141,6 +145,10 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
             question_ids_before = [
                 item["question_id"]
                 for item in acknowledged["questions"]]
+            helper.tid(page, "preview-return").click()
+            expect(
+                page.get_by_test_id("stage-question-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
 
             # An unsent draft plus the displayed source reference
             # must survive the refusal untouched.
@@ -168,6 +176,10 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
             # Trigger one new generation through the DOM. The
             # response predicate deliberately does not filter on
             # status, so a wrong status cannot be waited away.
+            helper.tid(page, "workflow-nav-source").click()
+            expect(
+                page.get_by_test_id("stage-source-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             generate_button = page.get_by_role(
                 "button", name="اعتماد المصدر وتوليد الأسئلة",
                 exact=True)
@@ -269,6 +281,10 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
 
             # In the DOM this request's slots stay pending-coded
             # but read as closed with no result, not as working.
+            helper.tid(page, "workflow-nav-questions").click()
+            expect(
+                page.get_by_test_id("stage-question-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             pending_rows = page.locator(
                 "[data-testid='slot-outcome']"
                 "[data-outcome='pending']")
@@ -338,12 +354,20 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
                 helper.open_question_editor(other_card)
             ).to_have_value(
                 UNSENT_QUESTION_WORDING, timeout=ASSERT_TIMEOUT_MS)
+            helper.tid(page, "workflow-nav-preview").click()
+            expect(
+                page.get_by_test_id("stage-teacher-preview")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             expect(preview_items).to_have_count(
                 1, timeout=ASSERT_TIMEOUT_MS)
             expect(
                 helper.tid(preview_items.first, "preview-question")
             ).to_have_text(
                 preview[0]["question"], timeout=ASSERT_TIMEOUT_MS)
+            helper.tid(page, "preview-return").click()
+            expect(
+                page.get_by_test_id("stage-question-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
 
             # Local raw GET inspection is permitted and proves
             # nothing about a new invocation: provider POST
@@ -376,6 +400,10 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
             region_b = helper.region_by_raw(fetched, fx["RAW_B"])
             self.assertEqual(
                 region_b["current_text"], fx["EDITED_B"])
+            helper.tid(page, "workflow-nav-source").click()
+            expect(
+                page.get_by_test_id("stage-source-review")
+            ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
             helper.commit_region(
                 page, region_b, region_b["current_text"],
                 NEW_REGION_LABEL, "included")

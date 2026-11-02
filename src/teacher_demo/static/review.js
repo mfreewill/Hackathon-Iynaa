@@ -137,6 +137,313 @@ const questionRecords = new Map();
 const questionDrafts = new Map();
 const openEditors = new Set();
 const previewRecords = new Map();
+// Final-UI review support: workflow availability, adopted-step
+// handoffs, raw source notes and exact request summaries. This
+// block declares no snapshot, currency or dirty state of its own;
+// every helper reads the one coordinator state above and paints
+// text without adopting data or enabling any write.
+const sourceReviewNotes = byTestId("source-review-notes");
+const sourcePageContinuation = byTestId("source-page-continuation");
+const questionRequestSummaries = byTestId("question-request-summaries");
+
+// Availability follows the current adopted snapshot only. The
+// workspace setter paints step buttons and never calls back into
+// this coordinator, so updating it from renderView cannot recurse
+// and never moves the selected step.
+function workflowAvailabilityFor(snapshot, regions, questions) {
+  const requests = requestEntries(snapshot);
+  const closed = (entry) => entry && typeof entry === "object"
+    && (entry.state === "terminal" || entry.state === "superseded");
+  const source = regions.length > 0 || requests.some(
+    (entry) => closed(entry) && entry.kind === "source");
+  const slots = Array.isArray(snapshot?.slot_outcomes)
+    ? snapshot.slot_outcomes : [];
+  const questionsAvailable = questions.length > 0 || slots.length > 0
+    || requests.some((entry) => entry
+      && typeof entry === "object" && entry.kind === "questions");
+  const preview = Boolean(reviewCurrency.current && !previewSuppressed
+    && snapshot && Array.isArray(snapshot.preview_items)
+    && snapshot.preview_items.length);
+  return { source, questions: questionsAvailable, preview };
+}
+
+function updateWorkflowAvailability(snapshot, regions, questions) {
+  workspace.setWorkflowAvailability?.(
+    workflowAvailabilityFor(snapshot, regions, questions));
+}
+
+// Step handoff after provider adoption, shared by every source
+// branch: only an actually adopted, still-current snapshot for
+// this exact source may select a step. A late lease return has
+// adopted=false and keeps the previous snapshot, so it can never
+// pretend adoption here. Nothing in this path sends or resets.
+function handoffAdoptedProviderStep(info, adopted) {
+  if (!adopted || !info || !currentSnapshot
+      || currentSnapshot !== info.snapshot
+      || !reviewCurrency.current
+      || workspace.isOutcomeUncertain()
+      || workspace.isSessionExpired()
+      || activeSourceId !== info.sourceId
+      || currentSnapshot.source_id !== info.sourceId) {
+    return;
+  }
+  if (info.kind === "source" && info.outcome === "ok") {
+    if (typeof workspace.revealSourceReview === "function") {
+      workspace.revealSourceReview();
+    } else {
+      workspace.selectWorkflowStep?.("source");
+      workspace.showWork();
+    }
+    return;
+  }
+  if (info.kind === "questions") {
+    workspace.selectWorkflowStep?.("questions");
+    workspace.showWork();
+  }
+}
+
+// The same adopted-current proof for one exact closed request,
+// used when this coordinator's own generation action settles.
+function hasAdoptedCurrentRequest(kind, requestId, sourceId) {
+  return Boolean(currentSnapshot && reviewCurrency.current
+    && !workspace.isOutcomeUncertain()
+    && !workspace.isSessionExpired()
+    && activeSourceId === sourceId
+    && currentSnapshot.source_id === sourceId
+    && requestEntries(currentSnapshot).some((entry) => entry
+      && typeof entry === "object"
+      && entry.request_id === requestId && entry.kind === kind
+      && (entry.state === "terminal"
+        || entry.state === "superseded")));
+}
+
+// Source notes from the same retained raw read as the model
+// name. Envelope mismatch trusts neither field; each raw field
+// is then known only when it has its exact expected type.
+function validatedSourceNotes(raw, requestId, kind) {
+  if (kind !== "source" || !raw || typeof raw !== "object"
+      || raw.request_id !== requestId || raw.kind !== kind
+      || raw.raw_retention !== "retained") {
+    return null;
+  }
+  const result = raw.provider_result;
+  const payload = result && typeof result === "object"
+    ? result.raw : null;
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const notes = Array.isArray(payload.review_notes)
+    && payload.review_notes.every(
+      (value) => typeof value === "string")
+    ? [...payload.review_notes] : null;
+  const pageContinues = payload.page_continues === true
+      || payload.page_continues === false
+    ? payload.page_continues : null;
+  return { notes, pageContinues };
+}
+
+function sourceNotesRequestId() {
+  if (!currentSnapshot) {
+    return null;
+  }
+  if (sourceSummaryRequestId
+      && requestStillPresent("source", sourceSummaryRequestId)) {
+    return sourceSummaryRequestId;
+  }
+  for (const region of orderedRegions(currentSnapshot.regions)) {
+    const requestId = requestIdOf(region);
+    if (requestId) {
+      return requestId;
+    }
+  }
+  return null;
+}
+
+// Notes paint only from the matched entry already stored by the
+// epoch/source/request-fenced read, and only while that exact
+// request is still present in the current adopted snapshot.
+// Anything else is the unavailable state; the continuation
+// attribute exists only for a known boolean and its wording
+// attributes the claim to the model, never to this page.
+function paintSourceNotes() {
+  const requestId = sourceNotesRequestId();
+  const entry = requestId
+    ? modelByRequest.get(metadataKey("source", requestId)) : null;
+  const usable = Boolean(requestId && entry && currentSnapshot
+    && reviewCurrency.current && !workspace.isOutcomeUncertain()
+    && requestStillPresent("source", requestId));
+  const notes = usable && Array.isArray(entry.reviewNotes)
+    ? entry.reviewNotes : null;
+  const pageContinues = usable
+      && (entry.pageContinues === true
+        || entry.pageContinues === false)
+    ? entry.pageContinues : null;
+  if (sourceReviewNotes) {
+    sourceReviewNotes.hidden = false;
+    if (notes && notes.length) {
+      sourceReviewNotes.replaceChildren(...notes.map((note) => {
+        const line = document.createElement("p");
+        line.textContent = note;
+        return line;
+      }));
+    } else if (notes) {
+      sourceReviewNotes.textContent =
+        "لم يورد النموذج ملاحظات مراجعة لهذا المصدر.";
+    } else if (usable && entry.state === "pending") {
+      sourceReviewNotes.textContent =
+        "ملاحظات مراجعة النموذج غير متاحة بعد.";
+    } else {
+      sourceReviewNotes.textContent =
+        "ملاحظات مراجعة النموذج غير متاحة لهذا المصدر.";
+    }
+  }
+  if (sourcePageContinuation) {
+    sourcePageContinuation.hidden = false;
+    if (pageContinues === true || pageContinues === false) {
+      sourcePageContinuation.setAttribute(
+        "data-continues", pageContinues ? "true" : "false");
+      sourcePageContinuation.textContent = pageContinues
+        ? "أفاد النموذج بأن محتوى هذه الصفحة يمتد إلى صفحة تالية."
+        : "أفاد النموذج بأن محتوى هذه الصفحة لا يمتد إلى صفحة تالية.";
+    } else {
+      sourcePageContinuation.removeAttribute("data-continues");
+      sourcePageContinuation.textContent =
+        "غير متاح بعد ما أفاد به النموذج عن امتداد محتوى هذه الصفحة إلى صفحة تالية.";
+    }
+  }
+}
+
+function paintSourceNotesForRequest(kind, requestId) {
+  if (kind !== "source" || requestId !== sourceNotesRequestId()) {
+    return;
+  }
+  paintSourceNotes();
+}
+
+function slotOutcomeCounts(requestId, slotOutcomes) {
+  let draftCount = 0;
+  let abstainCount = 0;
+  for (const entry of Array.isArray(slotOutcomes)
+      ? slotOutcomes : []) {
+    if (!entry || typeof entry !== "object"
+        || entry.request_id !== requestId) {
+      continue;
+    }
+    const outcome = String(entry.outcome ?? entry.status ?? "");
+    if (outcome === "draft") {
+      draftCount += 1;
+    } else if (outcome === "abstain" || outcome === "abstained") {
+      abstainCount += 1;
+    }
+  }
+  return { draftCount, abstainCount };
+}
+
+// One exact request's summary sentence, composed only from that
+// request's outcome and its own slot counts: abstention wording
+// appears only where abstentions actually occurred, and a zero
+// draft count is stated as no draft arriving, never as drafts
+// waiting below.
+function questionRequestSummaryText(request, draftCount,
+    abstainCount) {
+  const outcome = typeof request?.outcome === "string"
+    ? request.outcome : "";
+  let lead;
+  if (outcome === "ok") {
+    lead = "اكتمل طلب توليد الأسئلة.";
+  } else if (outcome === "cancelled") {
+    lead = "أُلغي طلب توليد الأسئلة.";
+  } else {
+    const phrase = workspace.outcomePhrase(outcome) || outcome
+      || "نتيجة غير مؤكدة";
+    lead = `انتهى طلب توليد الأسئلة دون اكتمال ناجح: ${phrase}.`;
+  }
+  const draftClause = draftCount > 0
+    ? `وصلت ${arabicIndic(draftCount)} من مسودات الأسئلة الجديدة.`
+    : "لم تصل أي مسودة سؤال جديدة من هذا الطلب.";
+  const abstainClause = abstainCount > 0
+    ? `امتنع النموذج في ${arabicIndic(abstainCount)} من المستويات (امتناع عن التوليد).`
+    : "";
+  return [lead, draftClause, abstainClause].filter(Boolean).join(" ");
+}
+
+// Request order is the snapshot's own order; no latest request
+// is picked by sorting IDs and previous question cards are left
+// to the keyed card rendering, never erased here. Returns how
+// many summaries were painted so the generic empty line can
+// stand down when a real outcome is already readable.
+function renderQuestionRequestSummaries(snapshot) {
+  if (!questionRequestSummaries) {
+    return 0;
+  }
+  const seen = new Set();
+  const nodes = [];
+  for (const request of requestEntries(snapshot)) {
+    if (!request || typeof request !== "object"
+        || request.kind !== "questions"
+        || (request.state !== "terminal"
+          && request.state !== "superseded")
+        || typeof request.outcome !== "string"
+        || !request.outcome) {
+      continue;
+    }
+    const requestId = requestIdOf(request);
+    if (!requestId || seen.has(requestId)) {
+      continue;
+    }
+    seen.add(requestId);
+    const { draftCount, abstainCount } = slotOutcomeCounts(
+      requestId, snapshot?.slot_outcomes);
+    const node = document.createElement("div");
+    node.dataset.testid = "question-request-summary";
+    node.dataset.requestId = requestId;
+    node.dataset.outcome = request.outcome;
+    node.dataset.draftCount = String(draftCount);
+    node.dataset.abstainCount = String(abstainCount);
+    const text = document.createElement("span");
+    text.textContent = questionRequestSummaryText(
+      request, draftCount, abstainCount);
+    const identifier = document.createElement("bdi");
+    identifier.textContent = requestId;
+    node.append(text, " معرّف الطلب: ", identifier);
+    nodes.push(node);
+  }
+  questionRequestSummaries.replaceChildren(...nodes);
+  if (nodes.length) {
+    questionRequestSummaries.hidden = false;
+  }
+  return nodes.length;
+}
+
+// The global generation result line for one exact operation,
+// counted from that request's own slot outcomes in its result
+// snapshot. Without any slot rows for the request the previous
+// general success line remains the honest fallback.
+function generationSuccessText(requestId, snapshot) {
+  if (!requestId || !snapshot || typeof snapshot !== "object"
+      || !Array.isArray(snapshot.slot_outcomes)) {
+    return GENERATION_SUCCESS;
+  }
+  const ownSlots = snapshot.slot_outcomes.filter((entry) => entry
+    && typeof entry === "object" && entry.request_id === requestId);
+  if (!ownSlots.length) {
+    return GENERATION_SUCCESS;
+  }
+  const { draftCount, abstainCount } = slotOutcomeCounts(
+    requestId, snapshot.slot_outcomes);
+  if (draftCount > 0) {
+    const abstainClause = abstainCount > 0
+      ? ` امتنع النموذج في ${arabicIndic(abstainCount)} من المستويات.`
+      : "";
+    return `اكتمل توليد الأسئلة: وصلت ${arabicIndic(draftCount)} من مسودات الأسئلة الجديدة؛ راجع المسودات أدناه قبل أي اعتماد.${abstainClause}`;
+  }
+  if (abstainCount > 0) {
+    return `اكتمل طلب توليد الأسئلة دون مسودات جديدة: لم تصل أي مسودة سؤال جديدة، وامتنع النموذج في ${arabicIndic(abstainCount)} من المستويات.`;
+  }
+  return "اكتمل طلب توليد الأسئلة دون مسودات جديدة: لم تصل أي مسودة سؤال جديدة.";
+}
+
+
 
 const callbacks = {
   onRegionDraft: handleRegionDraft,
@@ -463,19 +770,24 @@ function ensureModel(kind, requestId) {
   const epoch = metadataEpoch;
   const entry = {
     state: "pending", modelName: null, originals: null,
-    promise: null };
+    reviewNotes: null, pageContinues: null, promise: null };
   modelByRequest.set(key, entry);
   entry.promise = (async () => {
     let modelName = null;
     let originals = null;
+    let sourceNotes = null;
     try {
       const raw = await workspace.getJson(
         `/api/session/requests/${encodeURIComponent(requestId)}/raw`);
       modelName = validatedModelName(raw, requestId, kind);
       originals = validatedOriginalItems(raw, requestId, kind);
+      // General source notes ride this same single raw read;
+      // no second fetch or authority is created for them.
+      sourceNotes = validatedSourceNotes(raw, requestId, kind);
     } catch {
       modelName = null;
       originals = null;
+      sourceNotes = null;
     }
     // A late read for an old source, or after sticky uncertainty,
     // must not re-label what is now displayed.
@@ -497,11 +809,16 @@ function ensureModel(kind, requestId) {
     entry.state = modelName ? "known" : "unavailable";
     entry.modelName = modelName;
     entry.originals = originals;
+    entry.reviewNotes = sourceNotes ? sourceNotes.notes : null;
+    entry.pageContinues = sourceNotes
+      ? sourceNotes.pageContinues : null;
     paintModelForRequest(kind, requestId, modelName);
     paintOriginalsForRequest(kind, requestId);
+    paintSourceNotesForRequest(kind, requestId);
   })();
   return entry.promise;
 }
+
 
 function ensureSnapshotProvenance(snapshot) {
   if (!snapshot) {
@@ -718,7 +1035,7 @@ function applyRegionCurrency(record) {
   if (!isNoncurrentOnly()) {
     return;
   }
-  for (const testId of ["region-current-text-input",
+  for (const testId of ["region-edit", "region-current-text-input",
       "region-current-label-input", "region-inclusion-input",
       "region-review-cancel", "region-evidence-link"]) {
     setNodeControlDisabled(record.node, testId, false);
@@ -726,6 +1043,7 @@ function applyRegionCurrency(record) {
   setNodeControlsDisabled(
     record.node, "region-linked-question", false);
 }
+
 
 function applyQuestionCurrency(record) {
   const node = record.node;
@@ -771,8 +1089,12 @@ function emptyPreviewText(questions) {
   if (questions.some((question) => question.status === "rejected")) {
     return REJECTED_PREVIEW_TEXT;
   }
+  if (!questions.length) {
+    return "لا أسئلة معتمدة حاليًا؛ لا توجد أسئلة مولّدة بعد في هذا المصدر.";
+  }
   return defaultPreviewEmptyText;
 }
+
 
 function paintSourceSelection() {
   if (!sourceSelectedText) {
@@ -815,28 +1137,12 @@ function renderView() {
     ? workspace.sessionExpiredMessage()
     : reviewCurrency.reason === "identity"
       ? IDENTITY_CURRENCY_STATUS_TEXT : CURRENCY_STATUS_TEXT;
-  // The stage indicator follows adopted work only: committed
-  // regions, then questions, then a current approved preview.
-  let stageIndex = 0;
-  if (regions.length) {
-    stageIndex = 1;
-  }
-  if (questions.length) {
-    stageIndex = 2;
-  }
-  if (reviewCurrency.current && !previewSuppressed
-      && (snapshot?.preview_items || []).length) {
-    stageIndex = 3;
-  }
-  stageItems.forEach((item, index) => {
-    const current = index === stageIndex;
-    item.classList.toggle("stage-current", current);
-    if (current) {
-      item.setAttribute("aria-current", "step");
-    } else {
-      item.removeAttribute("aria-current");
-    }
-  });
+  // The workspace owns the active workflow step; this repaint
+  // only reports availability derived from the authoritative
+  // snapshot. It never selects a step (in particular it never
+  // auto-switches to preview from an approved count), so a
+  // first approval or a snapshot repaint cannot steal the step.
+  updateWorkflowAvailability(snapshot, regions, questions);
   // Retry visibility in the workspace operation group follows
   // this same currentness authority; refresh it whenever the
   // review view repaints for a currency-relevant change.
@@ -872,12 +1178,17 @@ function renderView() {
   generateGateStatus.textContent = canGenerate ? GATE_READY : GATE_UNAVAILABLE;
   generateButton.disabled = isLocked || !canGenerate
     || hasWorkingRequest(snapshot);
+  // Stored raw notes repaint from their matched entries only;
+  // a slow or unavailable read never blocks source review.
+  paintSourceNotes();
 
+  const summaryCount = renderQuestionRequestSummaries(snapshot);
   renderSlotOutcomes(snapshot?.slot_outcomes);
   const questionNodes = questions.map((question) => {
     const record = questionRecordFor(question);
     record.update(
-      question, isLocked, provenanceFor("questions", question));
+      question, isLocked, provenanceFor("questions", question),
+      isQuestionDirty(question.question_id, currentSnapshot));
     applyQuestionCurrency(record);
     return record.node;
   });
@@ -890,14 +1201,17 @@ function renderView() {
       openEditors.delete(id);
     }
   }
-  questionReviewEmpty.hidden = questions.length > 0;
+  // A readable exact-request summary is the outcome state for a
+  // zero-draft request; the generic empty line must not stand
+  // as if a successful generation were still the only account.
+  questionReviewEmpty.hidden = questions.length > 0 || summaryCount > 0;
 
   if (!reviewCurrency.current || previewSuppressed || !snapshot) {
     orderChildren(previewList, []);
     previewEmpty.hidden = false;
     previewEmpty.textContent =
       (!reviewCurrency.current || previewSuppressed)
-        ? STALE_PREVIEW_TEXT : defaultPreviewEmptyText;
+        ? STALE_PREVIEW_TEXT : emptyPreviewText(questions);
     return;
   }
   const entries = Array.isArray(snapshot.preview_items)
@@ -917,6 +1231,7 @@ function renderView() {
     previewEmpty.textContent = emptyPreviewText(questions);
   }
 }
+
 
 function adoptSnapshot(snapshot, options = {}) {
   if (workspace.isOutcomeUncertain()
@@ -1060,7 +1375,9 @@ async function handleProviderSnapshot(info) {
     return false;
   }
   if (info.kind !== "source" || info.outcome !== "ok") {
-    return adoptSnapshot(info.snapshot);
+    const adopted = adoptSnapshot(info.snapshot);
+    handoffAdoptedProviderStep(info, adopted);
+    return adopted;
   }
   // The summary keeps its old meaning: the model of this source
   // analysis request only, never a global latest model.
@@ -1069,7 +1386,9 @@ async function handleProviderSnapshot(info) {
       ? info.requestId : null;
   if (!sourceSummaryRequestId) {
     sourceModelName.textContent = MODEL_UNAVAILABLE;
-    return adoptSnapshot(info.snapshot);
+    const adopted = adoptSnapshot(info.snapshot);
+    handoffAdoptedProviderStep(info, adopted);
+    return adopted;
   }
   // A known non-retained envelope decides provenance without a
   // raw read. An unknown retention (status-recovered snapshot)
@@ -1079,9 +1398,12 @@ async function handleProviderSnapshot(info) {
     modelByRequest.set(
       metadataKey("source", sourceSummaryRequestId),
       { state: "unavailable", modelName: null, originals: null,
+        reviewNotes: null, pageContinues: null,
         promise: Promise.resolve() });
     sourceModelName.textContent = MODEL_UNAVAILABLE;
-    return adoptSnapshot(info.snapshot);
+    const adopted = adoptSnapshot(info.snapshot);
+    handoffAdoptedProviderStep(info, adopted);
+    return adopted;
   }
   const adopted = adoptSnapshot(info.snapshot);
   if (adopted) {
@@ -1093,8 +1415,10 @@ async function handleProviderSnapshot(info) {
     // attribution (or the honest unavailable state).
     void ensureModel("source", sourceSummaryRequestId);
   }
+  handoffAdoptedProviderStep(info, adopted);
   return adopted;
 }
+
 
 // The review-currentness permission the workspace operation
 // owner consults for provider sends it drives itself (the
@@ -1255,8 +1579,10 @@ function handleShowQuestion(questionId) {
     return;
   }
   workspace.showWork();
+  workspace.selectWorkflowStep?.("questions");
   record.heading.focus();
 }
+
 
 function handleRegionDraft(regionId, field, value) {
   let draft = regionDrafts.get(regionId);
@@ -1277,8 +1603,10 @@ function handleRegionCancel(regionId) {
     return;
   }
   regionDrafts.set(regionId, regionDraftFrom(region));
+  regionRecords.get(regionId)?.closeEditor?.();
   renderView();
 }
+
 
 function handleQuestionDraft(questionId, key, value) {
   let draft = questionDrafts.get(questionId);
@@ -1291,7 +1619,10 @@ function handleQuestionDraft(questionId, key, value) {
     questionDrafts.set(questionId, draft);
   }
   draft[key] = value;
+  questionRecords.get(questionId)?.setDirtyState?.(
+    isQuestionDirty(questionId, currentSnapshot));
 }
+
 
 function handleQuestionEditToggle(questionId) {
   const question = findQuestion(currentSnapshot, questionId);
@@ -1341,9 +1672,13 @@ function assertSendable(expectedSourceId) {
 }
 
 async function sendSnapshotMutation(
-    stage, url, method, payload, expectedSourceId) {
+    stage, url, method, payload, expectedSourceId, finalSendCheck) {
   await workspace.ensureSession();
   assertSendable(expectedSourceId);
+  if (typeof finalSendCheck === "function"
+      && finalSendCheck() !== true) {
+    throw ABORTED;
+  }
   const response = await workspace.apiFetch(
     stage, url, jsonMutationOptions(method, payload));
   const body = await workspace.readJsonBody(stage, response);
@@ -1358,6 +1693,7 @@ async function sendSnapshotMutation(
   }
   return body.snapshot;
 }
+
 
 function definiteMessage(error, fallback) {
   if (workspace.isSessionExpiredError(error)) {
@@ -1432,6 +1768,7 @@ function handleRegionCommit(regionId) {
       outcome = adoptSnapshot(snapshot, { resetRegionId: regionId })
         ? "success" : "aborted";
       if (outcome === "success") {
+        regionRecords.get(regionId)?.closeEditor?.();
         workspace.setStatus(REGION_SAVED);
       }
     } catch (error) {
@@ -1444,6 +1781,7 @@ function handleRegionCommit(regionId) {
     }
   });
 }
+
 
 // Position comes only from the acknowledged snapshot order. A
 // boundary no-op states the resulting position without claiming
@@ -1573,7 +1911,9 @@ function handleQuestionDecision(questionId, action) {
   const expectedSourceId = currentSnapshot?.source_id;
   const record = questionRecords.get(questionId);
   if (!expectedSourceId || !record || !reviewCurrency.current
-      || workspace.isOutcomeUncertain()) {
+      || workspace.isOutcomeUncertain()
+      || (action === "approve"
+        && isQuestionDirty(questionId, currentSnapshot))) {
     return;
   }
   const fallback = action === "approve"
@@ -1586,10 +1926,17 @@ function handleQuestionDecision(questionId, action) {
       if (!findQuestion(currentSnapshot, questionId)) {
         throw ABORTED;
       }
+      if (action === "approve"
+          && isQuestionDirty(questionId, currentSnapshot)) {
+        throw ABORTED;
+      }
       const snapshot = await sendSnapshotMutation(
         "question-decision",
         `/api/session/questions/${encodeURIComponent(questionId)}/${action}`,
-        "POST", {}, expectedSourceId);
+        "POST", {}, expectedSourceId,
+        action === "approve"
+          ? () => !isQuestionDirty(questionId, currentSnapshot)
+          : undefined);
       outcome = adoptSnapshot(snapshot) ? "success" : "aborted";
       if (outcome === "success") {
         workspace.setStatus(action === "approve"
@@ -1607,6 +1954,7 @@ function handleQuestionDecision(questionId, action) {
     }
   });
 }
+
 
 function handleQuestionApprove(questionId) {
   handleQuestionDecision(questionId, "approve");
@@ -1670,7 +2018,8 @@ function handleGenerate() {
       if (result.type === "success") {
         outcome = "success";
         if (ownsUi) {
-          workspace.setStatus(GENERATION_SUCCESS);
+          workspace.setStatus(generationSuccessText(
+            operation.requestId, result.snapshot));
         }
       } else if (result.type === "terminal") {
         outcome = "terminal";
@@ -1704,9 +2053,15 @@ function handleGenerate() {
         || workspace.isSessionExpired()) {
       return;
     }
-    if (outcome === "success") {
+    if ((outcome === "success" || outcome === "terminal")
+        && hasAdoptedCurrentRequest(
+          "questions", operation.requestId, expectedSourceId)) {
+      workspace.selectWorkflowStep?.("questions");
+      workspace.showWork();
       focusIfUsable(questionReviewHeading);
-    } else if (["terminal", "definite"].includes(outcome)) {
+    } else if (outcome === "success") {
+      focusIfUsable(questionReviewHeading);
+    } else if (outcome === "terminal" || outcome === "definite") {
       if (!generateButton.disabled) {
         generateButton.focus();
       } else {
@@ -1715,6 +2070,7 @@ function handleGenerate() {
     }
   });
 }
+
 
 workspace.onBusy(handleBusy);
 workspace.onSettingsAcknowledged(handleSettingsAcknowledged);
@@ -1738,8 +2094,10 @@ workspace.onSessionExpired(() => {
 generateButton?.addEventListener("click", handleGenerate);
 previewReturn?.addEventListener("click", () => {
   workspace.showWork();
+  workspace.selectWorkflowStep?.("questions");
   focusIfUsable(questionReviewHeading);
 });
+
 if (workspace.isOutcomeUncertain()) {
   previewSuppressed = true;
 }

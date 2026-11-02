@@ -437,6 +437,109 @@ details summary {
   margin-block-start: 8px;
 }
 
+.stage button {
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  overflow-wrap: anywhere;
+  padding: 6px 4px;
+}
+
+.provider-operation {
+  margin-top: 16px;
+  padding-top: 4px;
+}
+
+.provider-operation .item-actions button {
+  flex: 1 1 10rem;
+  overflow-wrap: anywhere;
+}
+
+.region-current-text {
+  border-inline-start: 3px solid var(--teal);
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+  padding-inline-start: 12px;
+  white-space: pre-wrap;
+}
+
+.region-item .question-meta,
+.question-card .question-meta {
+  margin: 2px 0;
+}
+
+.question-draft-status {
+  border: 1px solid var(--amber);
+  border-radius: 10px;
+  font-weight: 700;
+  margin: 8px 0;
+  padding: 6px 12px;
+}
+
+.source-review-notes {
+  margin-block: 8px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.source-page-continuation {
+  color: var(--muted);
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+.question-request-summaries {
+  margin-block: 12px;
+}
+
+[data-testid="question-request-summary"] {
+  margin-block: 4px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .workspace-header {
+    padding: 12px 12px 4px;
+  }
+
+  .workspace {
+    padding: 8px 12px 24px;
+  }
+
+  .pane {
+    padding: 12px;
+  }
+
+  .stages {
+    gap: 6px;
+  }
+
+  .stage {
+    flex: 1 1 40%;
+    text-align: center;
+  }
+
+  .stage button {
+    width: 100%;
+  }
+
+  .item-actions button,
+  .secondary-action,
+  .primary-action {
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+
+  .region-item,
+  .question-card,
+  .preview-item {
+    margin-block: 12px;
+    padding: 10px 12px;
+  }
+}
+
 @media (max-width: 1023.98px) {
   .workspace-header {
     padding: 16px 16px 8px;

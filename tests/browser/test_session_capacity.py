@@ -41,7 +41,7 @@ OBJECTIVE = "  هَدَفٌ: قِرَاءَةُ النَّصِّ ١٢٣  "
 UNKNOWN_PHRASE = "نتيجة الطلب غير معروفة"
 BOOT_FAILURE_STATUS = (
     "تعذّر بدء جلسة هذا المتصفح. تحقّق من الخادم المحلي ثم اضغط "
-    "«بدء تحليل الصفحة» للمحاولة بضغطة جديدة.")
+    "«تهيئة الصفحة» للمحاولة بضغطة جديدة.")
 DEFINITE_FAILURE_ERROR = (
     "تعذّر إكمال هذه الخطوة. لم نُعد المحاولة تلقائيًا؛ راجع ما هو "
     "ظاهر ثم حاول مجددًا بضغطة جديدة.")
@@ -210,7 +210,7 @@ class SessionCapacityBrowserTests(unittest.TestCase):
                 self.assertNotIn(
                     UNKNOWN_PHRASE, status.text_content() or "")
                 primary = page.get_by_role(
-                    "button", name="بدء تحليل الصفحة", exact=True)
+                    "button", name="تهيئة الصفحة", exact=True)
                 expect(primary).to_be_enabled(
                     timeout=ASSERT_TIMEOUT_MS)
                 expect(

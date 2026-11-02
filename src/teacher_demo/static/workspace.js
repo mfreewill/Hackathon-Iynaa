@@ -25,7 +25,22 @@ const pageNumberInput = document.getElementById("page-number");
 const setupError = document.querySelector("[data-testid='setup-error']");
 const replacementWarning = document.querySelector(
   "[data-testid='replacement-warning']");
-const primaryButton = form.querySelector(".primary-action");
+const primaryButton = document.querySelector(
+  "[data-testid='prepare-page']");
+const confirmButton = document.querySelector(
+  "[data-testid='confirm-page']");
+const preparedPagePanel = document.querySelector(
+  "[data-testid='prepared-page']");
+const selectedFilePageNote = document.querySelector(
+  "[data-testid='selected-file-page-note']");
+const setupActionStatus = document.querySelector(
+  "[data-testid='setup-action-status']");
+const generationActionStatus = document.querySelector(
+  "[data-testid='generation-action-status']");
+const bootError = document.querySelector(
+  "[data-testid='review-boot-error']");
+const previewReturnButton = document.querySelector(
+  "[data-testid='preview-return']");
 const workPane = document.querySelector("[data-testid='work-pane']");
 const sourcePane = document.querySelector("[data-testid='source-pane']");
 const sourceEmpty = document.querySelector("[data-testid='source-empty']");
@@ -65,6 +80,22 @@ const settingsApplyButton = document.querySelector(
   "[data-testid='settings-apply']");
 const generationRetryWarning = document.querySelector(
   "[data-testid='generation-retry-warning']");
+const workflowStepNames = ["setup", "source", "questions", "preview"];
+const workflowBodies = new Map(workflowStepNames.map((step) => [
+  step,
+  document.querySelector(`[data-workflow-step='${step}']`),
+]));
+const workflowNavButtons = new Map(workflowStepNames.map((step) => [
+  step,
+  document.querySelector(`[data-testid='workflow-nav-${step}']`),
+]));
+const workflowHeadingIds = {
+  setup: "setup-heading",
+  source: "source-review-heading",
+  questions: "question-review-heading",
+  preview: "teacher-preview-heading",
+};
+let activeWorkflowStep = "setup";
 
 let csrfToken = null;
 let sessionPromise = null;
@@ -356,6 +387,243 @@ let uiGeneration = 0;
 let operationSequence = 0;
 let activeProviderOperation = null;
 let lastSettledOperation = null;
+let reviewReady = false;
+let reviewBootFailed = false;
+let setupInputRevision = 0;
+let preparationSequence = 0;
+let pendingConfirmation = null;
+let initialAnalysisAttempted = false;
+let workflowAvailability = {
+  source: false,
+  questions: false,
+  preview: false,
+};
+
+function setWorkflowAvailability(next) {
+  workflowAvailability = {
+    source: Boolean(next?.source),
+    questions: Boolean(next?.questions),
+    preview: Boolean(next?.preview),
+  };
+  renderWorkflowStep();
+}
+
+function handleConfirmPage() {
+  const candidate = pendingConfirmation;
+  if (!candidate || candidate.state !== "ready"
+      || !pendingConfirmationCurrent(candidate)
+      || !pendingPreviewMatches(candidate)
+      || !previewImage.complete || previewImage.naturalWidth <= 0
+      || !hasCommittedSource
+      || candidate.sourceId !== committedSourceId
+      || outcomeUncertain || checkHostedLeaseExpiry()
+      || !providerSendPermitted("source", candidate.sourceId)) {
+    return;
+  }
+  const sourceId = candidate.sourceId;
+  const operation = claimProviderOperation("source", sourceId);
+  if (!operation) {
+    return;
+  }
+  initialAnalysisAttempted = true;
+  operation.beforeSend = () => Boolean(
+    candidate === pendingConfirmation
+    && candidate.state === "ready"
+    && candidate.sourceId === committedSourceId
+    && candidate.sourceId === operation.sourceId
+    && candidate.token === preparationSequence
+    && setupInputsUnchanged(candidate)
+    && pendingPreviewMatches(candidate)
+    && previewImage.complete && previewImage.naturalWidth > 0
+    && !outcomeUncertain
+    && !checkHostedLeaseExpiry()
+    && providerSendPermitted("source", candidate.sourceId));
+  void runSerialized(async () => {
+    try {
+      if (candidate !== pendingConfirmation
+          || candidate.state !== "ready"
+          || candidate.sourceId !== committedSourceId
+          || candidate.token !== preparationSequence
+          || !setupInputsUnchanged(candidate)
+          || !pendingPreviewMatches(candidate)
+          || !previewImage.complete
+          || previewImage.naturalWidth <= 0
+          || outcomeUncertain || checkHostedLeaseExpiry()
+          || !providerSendPermitted("source", sourceId)) {
+        return;
+      }
+      statusLine.textContent = "جارٍ طلب تحليل المصدر…";
+      const result = await executeProviderOperation(operation);
+      if (result.type !== "aborted"
+          && operation.generation === uiGeneration
+          && !outcomeUncertain
+          && committedSourceId === sourceId) {
+        statusLine.textContent = analysisResultMessage(result);
+      }
+    } catch (error) {
+      if (error instanceof StageError && error.stage === "analysis") {
+        statusLine.textContent = analysisMessage(error);
+      } else if (isUncertainOutcome(error)) {
+        enterUncertainOutcome();
+      } else if (error instanceof StageError) {
+        statusLine.textContent = setupStageMessage(error);
+      } else {
+        enterUncertainOutcome();
+      }
+    } finally {
+      finishProviderOperation(operation);
+    }
+  });
+}
+
+
+function setSetupActionStatus(text) {
+  if (setupActionStatus) {
+    setupActionStatus.textContent = text;
+  }
+}
+
+function reviewRegistrationsComplete() {
+  return sourceStartedCallbacks.length > 0
+    && providerSnapshotCallbacks.length > 0
+    && providerPermissionCallbacks.length > 0
+    && settingsCallbacks.length > 0
+    && standaloneSettingsPermissionCallbacks.length > 0
+    && identityRefusalCallbacks.length > 0
+    && busyCallbacks.length > 0
+    && uncertainCallbacks.length > 0
+    && sessionExpiredCallbacks.length > 0;
+}
+
+function showBootReadyIfPossible() {
+  if (!reviewReady || !csrfToken || outcomeUncertain
+      || isSessionExpired()) {
+    return;
+  }
+  statusLine.textContent =
+    "أكمل إعداد الصفحة ثم اضغط «تهيئة الصفحة».";
+  setSetupActionStatus(
+    "أدخل البيانات واختر صفحة ملف واحدة، ثم اضغط «تهيئة الصفحة».");
+}
+
+function renderWorkflowStep() {
+  const focused = document.activeElement;
+  workPane.dataset.activeStep = activeWorkflowStep;
+  workPane.setAttribute(
+    "aria-labelledby", workflowHeadingIds[activeWorkflowStep]);
+  for (const step of workflowStepNames) {
+    const body = workflowBodies.get(step);
+    if (body) {
+      body.hidden = step !== activeWorkflowStep;
+    }
+    const button = workflowNavButtons.get(step);
+    if (!button) {
+      continue;
+    }
+    const current = step === activeWorkflowStep;
+    button.disabled = step !== "setup"
+      && !workflowAvailability[step];
+    if (current) {
+      button.setAttribute("aria-current", "step");
+    } else {
+      button.removeAttribute("aria-current");
+    }
+    button.closest(".stage")?.classList.toggle(
+      "stage-current", current);
+  }
+  if (focused && focused !== document.body) {
+    for (const step of workflowStepNames) {
+      const body = workflowBodies.get(step);
+      if (step !== activeWorkflowStep && body?.contains(focused)) {
+        workflowNavButtons.get(activeWorkflowStep)
+          ?.focus({ preventScroll: true });
+        break;
+      }
+    }
+  }
+}
+
+function selectWorkflowStep(step) {
+  if (!workflowBodies.has(step)) {
+    return;
+  }
+  activeWorkflowStep = step;
+  renderWorkflowStep();
+}
+
+function revealSourceReview() {
+  selectWorkflowStep("source");
+  showWork();
+  const heading = document.querySelector(
+      "[data-testid='region-list'] [data-testid='region-heading']")
+    || document.getElementById("source-review-heading");
+  if (!heading) {
+    return;
+  }
+  heading.scrollIntoView({ block: "center", inline: "nearest" });
+  heading.focus({ preventScroll: true });
+  ensureFocusedControlVisible();
+}
+
+function captureSetupInputs() {
+  return {
+    revision: setupInputRevision,
+    file: fileInput.files && fileInput.files[0]
+      ? fileInput.files[0] : null,
+    grade: gradeInput.value,
+    objective: objectiveInput.value,
+    pageNumberText: pageNumberInput.value,
+  };
+}
+
+function setupInputsUnchanged(captured) {
+  if (!captured) {
+    return false;
+  }
+  const current = captureSetupInputs();
+  return current.revision === captured.revision
+    && current.file === captured.file
+    && current.grade === captured.grade
+    && current.objective === captured.objective
+    && current.pageNumberText === captured.pageNumberText;
+}
+
+function pendingConfirmationCurrent(candidate = pendingConfirmation) {
+  return Boolean(candidate
+    && candidate === pendingConfirmation
+    && !initialAnalysisAttempted
+    && candidate.sourceId === committedSourceId
+    && setupInputsUnchanged(candidate));
+}
+
+function renderPendingConfirmation() {
+  const candidate = pendingConfirmation;
+  const busy = queuedMutations > 0 || pending;
+  if (preparedPagePanel) {
+    preparedPagePanel.hidden = !candidate;
+  }
+  if (!confirmButton) {
+    return;
+  }
+  confirmButton.hidden = !candidate;
+  confirmButton.disabled = !candidate
+    || candidate.state !== "ready"
+    || !pendingConfirmationCurrent(candidate)
+    || busy || outcomeUncertain || isSessionExpired()
+    || !reviewReady
+    || !providerSendPermitted("source", candidate.sourceId);
+}
+
+function invalidatePendingConfirmation(message) {
+  if (!pendingConfirmation) {
+    return;
+  }
+  pendingConfirmation = null;
+  if (message) {
+    setSetupActionStatus(message);
+  }
+  renderPendingConfirmation();
+}
 
 // Standalone settings permission is owned by the review
 // coordinator's one currentness authority and only queried here
@@ -363,7 +631,9 @@ let lastSettledOperation = null;
 // currentness flag. A settings-reason withdrawal still permits
 // the deliberate correction send, and Start never asks this.
 function standaloneSettingsPermitted() {
-  return !isSessionExpired()
+  return reviewReady
+    && standaloneSettingsPermissionCallbacks.length > 0
+    && !isSessionExpired()
     && standaloneSettingsPermissionCallbacks.every(
       (callback) => callback() === true);
 }
@@ -381,8 +651,12 @@ function renderStandaloneSettingsControl() {
 
 function notifyBusy() {
   const busy = queuedMutations > 0 || pending;
-  primaryButton.disabled = outcomeUncertain || busy
+  primaryButton.disabled = !reviewReady || outcomeUncertain || busy
     || isSessionExpired();
+  if (previewReturnButton) {
+    previewReturnButton.disabled = !reviewReady;
+  }
+  renderPendingConfirmation();
   renderStandaloneSettingsControl();
   renderOperationControls();
   for (const callback of busyCallbacks) {
@@ -463,6 +737,8 @@ function enterUncertainOutcome() {
   }
   outcomeUncertain = true;
   uiGeneration += 1;
+  pendingConfirmation = null;
+  renderPendingConfirmation();
   primaryButton.disabled = true;
   if (settingsApplyButton) {
     settingsApplyButton.disabled = true;
@@ -654,7 +930,7 @@ function setupStageMessage(error) {
       return "توجد عمليات رفع كثيرة الآن. لم يتغيّر المصدر الحالي؛ انتظر قليلًا ثم حاول مجددًا بضغطة جديدة.";
     }
     if (error.status === 409) {
-      return "تغيّرت الإعدادات أثناء تجهيز الصفحة ولم يُعتمد هذا البدء. لم يتغيّر المصدر الحالي؛ راجع الإعدادات ثم اضغط «بدء تحليل الصفحة» مجددًا.";
+      return "تغيّرت الإعدادات أثناء تجهيز الصفحة ولم يُعتمد هذا البدء. لم يتغيّر المصدر الحالي؛ راجع الإعدادات ثم اضغط «تهيئة الصفحة» مجددًا.";
     }
   }
   return "تعذّر إكمال هذه الخطوة. لم نُعد المحاولة تلقائيًا؛ راجع ما هو ظاهر ثم حاول مجددًا بضغطة جديدة.";
@@ -867,6 +1143,11 @@ function isKnownPreAdmissionRefusal(status, body) {
     return Boolean(detail && typeof detail === "object"
       && detail.code === "provider_unavailable");
   }
+  if (status === 413) {
+    return Boolean(detail && typeof detail === "object"
+      && detail.code === "retained_capacity_exceeded"
+      && detail.admission === "not_started");
+  }
   const allowed = PRE_ADMISSION_REFUSALS[status];
   return Boolean(allowed && typeof detail === "string"
     && allowed.has(detail));
@@ -877,8 +1158,11 @@ function isKnownPreAdmissionRefusal(status, body) {
 // permission, registered below; there is no second currency
 // value here.
 function providerSendPermitted(kind, sourceId) {
-  return providerPermissionCallbacks.every(
-    (callback) => callback({ kind, sourceId }) === true);
+  return reviewReady
+    && providerSnapshotCallbacks.length > 0
+    && providerPermissionCallbacks.length > 0
+    && providerPermissionCallbacks.every(
+      (callback) => callback({ kind, sourceId }) === true);
 }
 
 // Refusals that invalidate this page's session/source identity:
@@ -939,6 +1223,12 @@ function operationOwnsUi(operation) {
 
 function setOperationStatus(operation, text) {
   operation.statusText = text;
+  if (operation.kind === "source") {
+    setSetupActionStatus(text);
+  } else if (operation.kind === "questions"
+      && generationActionStatus) {
+    generationActionStatus.textContent = text;
+  }
   renderOperationControls();
 }
 
@@ -946,8 +1236,10 @@ function markOperationUnresolved(operation, text) {
   if (!operationOwnsUi(operation)) {
     return;
   }
-  setOperationStatus(operation, text);
-  statusLine.textContent = text;
+  const effectiveText = operation.closureKnown
+    ? OPERATION_UNRECONCILED : text;
+  setOperationStatus(operation, effectiveText);
+  statusLine.textContent = effectiveText;
 }
 
 function renderOperationControls() {
@@ -963,15 +1255,16 @@ function renderOperationControls() {
   operationStatus.textContent = display.statusText || "";
   const expired = isSessionExpired();
   const active = display === activeProviderOperation && !display.settled;
-  const controlsDisabled = !active || !display.sent
-    || display.controlInFlight || expired;
+  const commonDisabled = !active || !display.sent || expired;
   if (operationCancelButton) {
     operationCancelButton.hidden = !active;
-    operationCancelButton.disabled = controlsDisabled;
+    operationCancelButton.disabled = commonDisabled
+      || display.cancelInFlight;
   }
   if (operationCheckButton) {
     operationCheckButton.hidden = !active;
-    operationCheckButton.disabled = controlsDisabled;
+    operationCheckButton.disabled = commonDisabled
+      || display.checkInFlight;
   }
   const canRetry = Boolean(!expired
     && !activeProviderOperation
@@ -1007,7 +1300,8 @@ function renderOperationControls() {
 // Synchronous claim: a rapid second activation finds the first
 // operation already owning the provider lane and sends nothing.
 function claimProviderOperation(kind, sourceId) {
-  if ((kind !== "source" && kind !== "questions") || !sourceId
+  if (!reviewReady || providerSnapshotCallbacks.length === 0
+      || (kind !== "source" && kind !== "questions") || !sourceId
       || outcomeUncertain || activeProviderOperation
       || sourceId !== committedSourceId
       || checkHostedLeaseExpiry()) {
@@ -1028,8 +1322,11 @@ function claimProviderOperation(kind, sourceId) {
     discarded: false,
     closureKnown: false,
     closureOutcome: null,
-    controlInFlight: false,
+    checkInFlight: false,
+    cancelInFlight: false,
     reconciling: false,
+    beforeSend: null,
+    progressRevealed: false,
     result: null,
     statusText: kind === "source"
       ? "سيُرسل طلب تحليل المصدر عند بدء تنفيذه."
@@ -1169,17 +1466,35 @@ function classifyOriginalResponse(operation, status, body, readable) {
           });
         }
       }
+      const refusalDetail = detailOfBody(body);
+      const refusalStatus = status === 413
+          && refusalDetail && typeof refusalDetail === "object"
+          && refusalDetail.code === "retained_capacity_exceeded"
+          && refusalDetail.admission === "not_started"
+        ? "تعذّر قبول هذا الإرسال ضمن حدود مساحة العمل؛ لم يبدأ طلب لدى المزوّد في هذه المحاولة."
+        : OPERATION_REFUSED;
       settleOperation(operation, {
         type: "refusal",
         outcome: null,
         snapshot: null,
         httpStatus: status,
         detail: detailOfBody(body),
-      }, OPERATION_REFUSED);
+      }, refusalStatus);
       return;
     }
   }
   markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
+}
+
+function revealProviderOperation(operation) {
+  if (!operationGroup || !operation
+      || operation !== activeProviderOperation
+      || operation.progressRevealed || workPane.hidden) {
+    return;
+  }
+  operation.progressRevealed = true;
+  operationGroup.scrollIntoView({
+    block: "center", inline: "nearest" });
 }
 
 // Runs inside the caller's serialized task. Rechecks the queued
@@ -1208,14 +1523,17 @@ async function executeProviderOperation(operation) {
       || operation.sourceId !== committedSourceId
       || checkHostedLeaseExpiry()
       || !providerSendPermitted(
-        operation.kind, operation.sourceId)) {
+        operation.kind, operation.sourceId)
+      || (operation.beforeSend
+        && operation.beforeSend() !== true)) {
     return { type: "aborted" };
   }
   operation.generation = uiGeneration;
   operation.sent = true;
   setOperationStatus(operation, operation.kind === "source"
-    ? "طلب تحليل المصدر قيد التنفيذ لدى المزوّد."
-    : "طلب توليد الأسئلة قيد التنفيذ لدى المزوّد.");
+    ? "جارٍ طلب تحليل المصدر وانتظار رد المزوّد…"
+    : "جارٍ طلب توليد الأسئلة وانتظار رد المزوّد…");
+  revealProviderOperation(operation);
   const stage = operation.kind === "source" ? "analysis" : "generation";
   const original = (async () => {
     let response;
@@ -1309,12 +1627,14 @@ async function reconcileFromSnapshotRead(operation) {
 async function checkActiveOperation() {
   const operation = activeProviderOperation;
   if (!operation || operation.settled || !operation.sent
-      || operation.controlInFlight || outcomeUncertain
-      || checkHostedLeaseExpiry()) {
+      || operation.checkInFlight || outcomeUncertain
+      || checkHostedLeaseExpiry()
+      || operation.sourceId !== committedSourceId
+      || operation.generation !== uiGeneration) {
     return;
   }
-  operation.controlInFlight = true;
-  renderOperationControls();
+  operation.checkInFlight = true;
+  setOperationStatus(operation, "جارٍ التحقق من حالة الطلب…");
   try {
     if (operation.closureKnown) {
       await reconcileFromSnapshotRead(operation);
@@ -1370,7 +1690,7 @@ async function checkActiveOperation() {
       markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
     }
   } finally {
-    operation.controlInFlight = false;
+    operation.checkInFlight = false;
     renderOperationControls();
   }
 }
@@ -1379,12 +1699,14 @@ async function checkActiveOperation() {
 async function cancelActiveOperation() {
   const operation = activeProviderOperation;
   if (!operation || operation.settled || !operation.sent
-      || operation.controlInFlight || outcomeUncertain
-      || checkHostedLeaseExpiry()) {
+      || operation.cancelInFlight || outcomeUncertain
+      || checkHostedLeaseExpiry()
+      || operation.sourceId !== committedSourceId
+      || operation.generation !== uiGeneration) {
     return;
   }
-  operation.controlInFlight = true;
-  renderOperationControls();
+  operation.cancelInFlight = true;
+  setOperationStatus(operation, "جارٍ طلب إلغاء الطلب…");
   try {
     await ensureSession();
     if (checkHostedLeaseExpiry() || !operationOwnsUi(operation)) {
@@ -1442,7 +1764,7 @@ async function cancelActiveOperation() {
       markOperationUnresolved(operation, OPERATION_UNCONFIRMED);
     }
   } finally {
-    operation.controlInFlight = false;
+    operation.cancelInFlight = false;
     renderOperationControls();
   }
 }
@@ -1450,6 +1772,7 @@ async function cancelActiveOperation() {
 
 function adoptSource(metadata) {
   uiGeneration += 1;
+  initialAnalysisAttempted = false;
   hasCommittedSource = true;
   committedSourceId = metadata.source_id;
   sourceEmpty.hidden = true;
@@ -1465,6 +1788,54 @@ function adoptSource(metadata) {
     `${arabicIndic(metadata.page_index + 1)} من ${arabicIndic(metadata.page_count)}`;
   updateReplacementWarning();
 }
+
+function pendingPreviewMatches(candidate) {
+  return Boolean(candidate
+    && candidate === pendingConfirmation
+    && candidate.sourceId === committedSourceId
+    && candidate.token === preparationSequence
+    && setupInputsUnchanged(candidate)
+    && previewImage.getAttribute("src") === candidate.previewUrl);
+}
+
+previewImage.addEventListener("load", () => {
+  const candidate = pendingConfirmation;
+  if (!pendingPreviewMatches(candidate)
+      || !previewImage.complete || previewImage.naturalWidth <= 0) {
+    return;
+  }
+  if (checkHostedLeaseExpiry() || isSessionExpired()
+      || outcomeUncertain) {
+    return;
+  }
+  candidate.state = "ready";
+  const message =
+    "راجع صورة صفحة الملف في لوحة المصدر، ثم اضغط «تحليل هذه الصفحة» لبدء التحليل.";
+  setSetupActionStatus(message);
+  if (!checkHostedLeaseExpiry() && !outcomeUncertain) {
+    statusLine.textContent = message;
+  }
+  renderPendingConfirmation();
+});
+
+previewImage.addEventListener("error", () => {
+  const candidate = pendingConfirmation;
+  if (!pendingPreviewMatches(candidate)) {
+    return;
+  }
+  if (checkHostedLeaseExpiry() || isSessionExpired()
+      || outcomeUncertain) {
+    return;
+  }
+  candidate.state = "image-failed";
+  const message =
+    "تعذّر تحميل صورة صفحة الملف المهيأة، لذا لا يمكن تأكيد تحليلها. هيّئ الصفحة مجددًا بعد التحقق من الخادم والملف.";
+  setSetupActionStatus(message);
+  if (!outcomeUncertain) {
+    statusLine.textContent = message;
+  }
+  renderPendingConfirmation();
+});
 
 function analysisResultMessage(result) {
   if (checkHostedLeaseExpiry()) {
@@ -1485,15 +1856,13 @@ function analysisResultMessage(result) {
     result.detail ?? { code: result.outcome }));
 }
 
-// The one settings PUT/acknowledgment path, shared by Start and
-// the standalone settings save. Exact request body and exact
-// echo validation stay as they were; a completed request whose
-// echo does not match is never treated as acknowledged. Only the
-// standalone save passes a before-send guard, rechecked after the
-// session await so a sticky identity refusal learned in between
-// blocks the final send; Start keeps its separate explicit
-// semantics and passes none. Returns false when the guard kept
-// the send from happening at all.
+// The one settings PUT/acknowledgment path, shared by page
+// preparation and the standalone settings save. Exact request
+// body and exact echo validation stay as they were; a completed
+// request whose echo does not match is never treated as
+// acknowledged. Each caller passes its own before-send guard,
+// rechecked after the session await. Returns false when the
+// guard kept the send from happening at all.
 async function putSettingsAcknowledged(
     grade, objective, beforeSend = null) {
   await ensureSession();
@@ -1523,15 +1892,19 @@ async function putSettingsAcknowledged(
   return true;
 }
 
-async function startAnalysis() {
+async function preparePage() {
   if (pending || outcomeUncertain || checkHostedLeaseExpiry()) {
     return;
   }
+  if (!reviewReady) {
+    setSetupActionStatus(reviewBootFailed
+      ? "وحدة المراجعة غير محملة؛ التهيئة متوقفة في هذه الصفحة."
+      : "جارٍ تحميل وحدة المراجعة؛ لا يمكن التهيئة بعد.");
+    return;
+  }
   clearSetupError();
-  const file = fileInput.files && fileInput.files[0];
-  const grade = gradeInput.value;
-  const objective = objectiveInput.value;
-  const pageNumberText = pageNumberInput.value;
+  const captured = captureSetupInputs();
+  const { file, grade, objective, pageNumberText } = captured;
   if (!file) {
     showSetupError("اختر ملف صفحة المصدر أولًا.", fileInput);
     return;
@@ -1553,16 +1926,61 @@ async function startAnalysis() {
   }
   const pageIndex = Number(pageNumberText) - 1;
   const previousStatus = statusLine.textContent;
-  let analysisOperation = null;
+  const token = ++preparationSequence;
+  let settingsAcknowledged = false;
+  let candidate = null;
+  pendingConfirmation = null;
+  renderPendingConfirmation();
   pending = true;
   notifyBusy();
-  statusLine.textContent = "جارٍ تجهيز الصفحة وبدء التحليل…";
+  setSetupActionStatus("جارٍ تجهيز جلسة المتصفح…");
+  statusLine.textContent = "جارٍ تجهيز جلسة المتصفح…";
   try {
-    await putSettingsAcknowledged(grade, objective);
-    if (checkHostedLeaseExpiry()) {
-      statusLine.textContent = sessionExpiredMessage();
+    await ensureSession();
+    if (token !== preparationSequence
+        || !setupInputsUnchanged(captured)) {
+      const message =
+        "تغيّرت مدخلات الإعداد أثناء تجهيز الجلسة، فلم تُهيَّأ صفحة. راجع المدخلات ثم هيّئ الصفحة مجددًا.";
+      setSetupActionStatus(message);
+      statusLine.textContent = message;
       return;
     }
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+      setSetupActionStatus(sessionExpiredMessage());
+      return;
+    }
+    setSetupActionStatus("جارٍ حفظ الصف والهدف…");
+    statusLine.textContent = "جارٍ حفظ الصف والهدف…";
+    const acknowledged = await putSettingsAcknowledged(
+      grade, objective,
+      () => reviewReady && token === preparationSequence
+        && setupInputsUnchanged(captured)
+        && !checkHostedLeaseExpiry());
+    if (!acknowledged) {
+      const message = isSessionExpired()
+        ? sessionExpiredMessage()
+        : "تغيّرت مدخلات الإعداد قبل إرسال حفظ الصف والهدف، فلم تُهيَّأ صفحة. راجع المدخلات ثم هيّئ الصفحة مجددًا.";
+      setSetupActionStatus(message);
+      statusLine.textContent = message;
+      return;
+    }
+    settingsAcknowledged = true;
+    if (checkHostedLeaseExpiry()) {
+      statusLine.textContent = sessionExpiredMessage();
+      setSetupActionStatus(sessionExpiredMessage());
+      return;
+    }
+    if (token !== preparationSequence
+        || !setupInputsUnchanged(captured)) {
+      const message =
+        "حُفظ الصف والهدف، لكن تغيّرت المدخلات قبل تهيئة الصفحة فلم تُهيَّأ صفحة جديدة. راجع المدخلات ثم هيّئ الصفحة مجددًا.";
+      setSetupActionStatus(message);
+      statusLine.textContent = message;
+      return;
+    }
+    setSetupActionStatus("جارٍ تهيئة صفحة الملف المختارة…");
+    statusLine.textContent = "جارٍ تهيئة صفحة الملف المختارة…";
     const startResponse = await apiFetch(
       "start", `/api/session/start?page_index=${pageIndex}`, {
         method: "POST",
@@ -1579,59 +1997,80 @@ async function startAnalysis() {
       statusLine.textContent =
         "وصل إقرار بدء جديد بعد انتهاء نافذة التأكيد، فلم يُعتمد مصدره في هذا العرض ولم تُمسّ الصفحة والمسودات المعروضة. "
         + sessionExpiredMessage();
+      setSetupActionStatus(sessionExpiredMessage());
       return;
     }
+    const inputsStillCurrent = token === preparationSequence
+      && setupInputsUnchanged(captured);
+    if (inputsStillCurrent) {
+      candidate = {
+        ...captured,
+        token,
+        pageIndex,
+        sourceId: metadata.source_id,
+        previewUrl:
+          `${metadata.preview_url}?v=${encodeURIComponent(metadata.render_sha256)}`,
+        state: "loading",
+      };
+      pendingConfirmation = candidate;
+      if (selectedFilePageNote) {
+        selectedFilePageNote.textContent =
+          `الصورة المعروضة في المصدر هي صفحة الملف ${arabicIndic(metadata.page_index + 1)} من ${arabicIndic(metadata.page_count)}. ترتيبها داخل الملف قد يختلف عن الرقم المطبوع على الصفحة، ولن يُحلَّل الملف أو الكتاب كاملًا.`;
+      }
+      // Force this preparation's own image load rather than
+      // trusting a previous complete image at the same URL.
+      previewImage.removeAttribute("src");
+    }
+    // The acknowledged Start remains the only destructive step.
+    // Preparation stops here: source analysis waits for the
+    // separate explicit confirmation of this exact page.
     adoptSource(metadata);
+    renderPendingConfirmation();
     for (const callback of sourceStartedCallbacks) {
       await callback(metadata);
     }
     if (checkHostedLeaseExpiry()) {
       statusLine.textContent = sessionExpiredMessage();
+      setSetupActionStatus(sessionExpiredMessage());
       return;
     }
-    statusLine.textContent = "جارٍ طلب تحليل المصدر…";
-    // The acknowledged Start above is the only destructive step.
-    // From here the exact provider operation owns the send, its
-    // complete response evidence and logical settlement; snapshot
-    // adoption happens inside settlement via the review callbacks.
-    analysisOperation = claimProviderOperation(
-      "source", metadata.source_id);
-    if (!analysisOperation) {
-      if (isSessionExpired()) {
-        statusLine.textContent = sessionExpiredMessage();
-        return;
+    if (!inputsStillCurrent || candidate !== pendingConfirmation
+        || !setupInputsUnchanged(captured)) {
+      if (pendingConfirmation === candidate) {
+        pendingConfirmation = null;
       }
-      throw new StageError("analysis", 0, null, false, true);
+      const message =
+        "تغيّرت مدخلات الإعداد أثناء تهيئة الصفحة؛ الصفحة المعروضة هي آخر صفحة هيّأها الخادم، لكنها ليست جاهزة للتحليل بالمدخلات الحالية. هيّئ الصفحة مجددًا.";
+      setSetupActionStatus(message);
+      statusLine.textContent = message;
+      renderPendingConfirmation();
+      return;
     }
-    const analysisResult = await executeProviderOperation(
-      analysisOperation);
-    if (checkHostedLeaseExpiry()) {
-      statusLine.textContent = sessionExpiredMessage();
-    } else if (analysisResult.type !== "aborted"
-        && analysisOperation.generation === uiGeneration
-        && !outcomeUncertain
-        && committedSourceId === metadata.source_id) {
-      statusLine.textContent = analysisResultMessage(analysisResult);
+    if (candidate.state === "loading") {
+      const message =
+        "وصلت بيانات الصفحة المهيأة؛ جارٍ تحميل صورة صفحة الملف للمراجعة قبل التحليل.";
+      setSetupActionStatus(message);
+      statusLine.textContent = message;
     }
   } catch (error) {
     if (isSessionExpiredError(error)) {
       statusLine.textContent = sessionExpiredMessage();
-    } else if (error instanceof StageError
-        && error.stage === "analysis") {
-      statusLine.textContent = analysisMessage(error);
+      setSetupActionStatus(sessionExpiredMessage());
     } else if (isUncertainOutcome(error)) {
       enterUncertainOutcome();
     } else if (error instanceof StageError) {
-      statusLine.textContent = previousStatus;
+      const message = setupStageMessage(error);
+      statusLine.textContent = settingsAcknowledged
+        ? "حُفظ الصف والهدف، لكن لم تُهيَّأ صفحة جديدة."
+        : previousStatus;
+      setSetupActionStatus(message);
       showSetupError(
-        setupStageMessage(error),
-        error.stage === "start" ? fileInput : null);
+        message, error.stage === "start" ? fileInput : null);
     } else {
       enterUncertainOutcome();
     }
   } finally {
     pending = false;
-    finishProviderOperation(analysisOperation);
     notifyBusy();
   }
 }
@@ -1665,6 +2104,7 @@ async function saveSettingsOnly() {
   const previousStatus = statusLine.textContent;
   pending = true;
   notifyBusy();
+  setSetupActionStatus("جارٍ تجهيز الجلسة وحفظ الصف والهدف…");
   statusLine.textContent = "جارٍ حفظ الصف والهدف…";
   try {
     const acknowledged = await putSettingsAcknowledged(
@@ -1673,12 +2113,15 @@ async function saveSettingsOnly() {
     if (!acknowledged) {
       statusLine.textContent = isSessionExpired()
         ? sessionExpiredMessage() : previousStatus;
+      setSetupActionStatus(statusLine.textContent);
       return;
     }
     if (checkHostedLeaseExpiry()) {
       statusLine.textContent = sessionExpiredMessage();
+      setSetupActionStatus(sessionExpiredMessage());
     } else if (!outcomeUncertain) {
       statusLine.textContent = "حُفظ الصف والهدف.";
+      setSetupActionStatus("حُفظ الصف والهدف.");
     }
   } catch (error) {
     if (isSessionExpiredError(error)) {
@@ -1687,6 +2130,7 @@ async function saveSettingsOnly() {
       enterUncertainOutcome();
     } else if (error instanceof StageError) {
       statusLine.textContent = previousStatus;
+      setSetupActionStatus(setupStageMessage(error));
       showSetupError(setupStageMessage(error));
     } else {
       enterUncertainOutcome();
@@ -1713,15 +2157,50 @@ if (settingsApplyButton) {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (startQueued || outcomeUncertain) {
+  if (!reviewReady || pending || startQueued || queuedMutations > 0
+      || outcomeUncertain || isSessionExpired()) {
     return;
   }
   startQueued = true;
-  void runSerialized(() => startAnalysis()).finally(() => {
+  void runSerialized(() => preparePage()).finally(() => {
     startQueued = false;
   });
 });
 fileInput.addEventListener("change", updateReplacementWarning);
+for (const setupInput of [fileInput, gradeInput, objectiveInput,
+    pageNumberInput]) {
+  if (!setupInput) {
+    continue;
+  }
+  const invalidateSetupInput = () => {
+    setupInputRevision += 1;
+    invalidatePendingConfirmation(
+      "تغيّرت بيانات الإعداد، لذا لم تعد الصفحة المهيأة بانتظار التأكيد صالحة. اضغط «تهيئة الصفحة» لتهيئة البيانات الحالية وتأكيدها.");
+  };
+  setupInput.addEventListener("input", invalidateSetupInput);
+  setupInput.addEventListener("change", invalidateSetupInput);
+}
+confirmButton?.addEventListener("click", handleConfirmPage);
+for (const [step, button] of workflowNavButtons) {
+  if (!button) {
+    continue;
+  }
+  button.addEventListener("click", () => {
+    if (button.disabled) {
+      return;
+    }
+    selectWorkflowStep(step);
+    showWork();
+    const heading = document.getElementById(workflowHeadingIds[step]);
+    if (!heading) {
+      return;
+    }
+    heading.scrollIntoView({ block: "center", inline: "nearest" });
+    heading.focus({ preventScroll: true });
+    ensureFocusedControlVisible();
+  });
+}
+
 
 // Explicit same-source analysis retry: a fresh exact source
 // operation only. No settings, no Start, no review reset; the
@@ -1981,7 +2460,16 @@ export const workspace = {
   isSessionExpiredError,
   sessionExpiredMessage,
   usageMessage,
-  setStatus: (text) => { statusLine.textContent = text; },
+  setStatus: (text) => {
+    statusLine.textContent = text;
+    if (activeWorkflowStep === "setup") {
+      setSetupActionStatus(text);
+    } else if ((activeWorkflowStep === "source"
+        || activeWorkflowStep === "questions")
+        && generationActionStatus) {
+      generationActionStatus.textContent = text;
+    }
+  },
   onUncertain: (callback) => { uncertainCallbacks.push(callback); },
   onSourceStarted: (callback) => {
     sourceStartedCallbacks.push(callback);
@@ -2020,9 +2508,21 @@ export const workspace = {
   isUsableProviderEnvelope,
   showSourceEvidence,
   showWork,
+  selectWorkflowStep,
+  revealSourceReview,
+  setWorkflowAvailability,
 };
 
-ensureSession().catch((error) => {
+let bootSessionFailed = false;
+
+ensureSession().then(() => {
+  if (!bootSessionFailed && !pending && !startQueued
+      && queuedMutations === 0 && !pendingConfirmation
+      && !hasCommittedSource) {
+    showBootReadyIfPossible();
+  }
+}).catch((error) => {
+  bootSessionFailed = true;
   if (outcomeUncertain) {
     return;
   }
@@ -2031,6 +2531,29 @@ ensureSession().catch((error) => {
     return;
   }
   statusLine.textContent =
-    "تعذّر بدء جلسة هذا المتصفح. تحقّق من الخادم المحلي ثم اضغط «بدء تحليل الصفحة» للمحاولة بضغطة جديدة.";
+    "تعذّر بدء جلسة هذا المتصفح. تحقّق من الخادم المحلي ثم اضغط «تهيئة الصفحة» للمحاولة بضغطة جديدة.";
+});
+
+import("./review.js").then(() => {
+  if (!reviewRegistrationsComplete()) {
+    throw new Error("Incomplete review registrations.");
+  }
+  reviewReady = true;
+  notifyBusy();
+  renderWorkflowStep();
+  if (!bootSessionFailed && !pending && !startQueued
+      && queuedMutations === 0 && !pendingConfirmation
+      && !hasCommittedSource) {
+    showBootReadyIfPossible();
+  }
+}).catch(() => {
+  reviewBootFailed = true;
+  reviewReady = false;
+  if (bootError) {
+    bootError.textContent =
+      "تعذّر تحميل مكوّن المراجعة ولم يُرسَل أي تحليل جديد للصفحة؛ يمكنك تحديث الصفحة بنفسك لإعادة المحاولة، لكن التحديث قد يُفقد أي عمل غير محفوظ.";
+    bootError.hidden = false;
+  }
+  notifyBusy();
 });
 

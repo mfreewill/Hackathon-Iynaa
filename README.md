@@ -1,14 +1,20 @@
 # Hackathon Iynaa — Arabic page-to-lesson teacher demo
 
 A standalone demonstration for adult teachers.
-It runs locally by default.
-An optional hostname-bound hosted launcher is also supported.
-See [docs/HOSTING.md](docs/HOSTING.md).
+The public site link at
+[hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
+an earlier published build.
+The final guided user interface (UI) described here has been
+verified locally and is not yet deployed there.
+This README accompanies the source; it is not an always-current
+deployment-status statement.
+The source also runs locally by default.
+See [docs/HOSTING.md](docs/HOSTING.md) for the hosted launcher.
 
-The teacher supplies one Arabic textbook page.
+The teacher supplies one Arabic textbook page (صفحة عربية).
 The application proposes source sections from that page.
-After teacher review of the source, it drafts questions across the
-six Bloom levels for further teacher review.
+After teacher review of the source, it drafts questions for the
+six Bloom slots for further teacher review.
 Only questions the teacher explicitly approves reach the preview.
 
 This is a separate implementation built around the pre-existing
@@ -42,24 +48,45 @@ Hackathon and its `Build for Your World` theme.
 
 ## Teacher-controlled flow
 
-1. The teacher uploads a page file, selects the page, and sets the
-   grade and learning objective.
-2. In explicit Meta mode, the application proposes source sections
-   for the full page, with review flags where attention is needed.
-3. The teacher edits section text and labels, decides whether each
-   section is included, excluded, or unresolved, and can adjust the
-   displayed order.
+1. The teacher uploads a page file, selects one file-page, and
+   sets the grade and learning objective, then clicks
+   تهيئة الصفحة (Prepare page).
+   Preparation shows the page reference only; it sends no model
+   request.
+2. The teacher inspects the exact page, then clicks
+   تحليل هذه الصفحة (Analyze this page) to confirm and send the
+   source request.
+   No model call happens before that confirmation.
+   In explicit Meta mode, the application then proposes source
+   sections for the full page, with review flags where attention
+   is needed.
+3. Work is guided one active step at a time: source review,
+   question review, then preview.
+   Explicit navigation between available steps does not reset the
+   workspace.
+   In source review, section text and flags are shown before any
+   optional edit.
+   The teacher saves or discards edits explicitly, decides
+   whether each section is included, excluded, or unresolved, and
+   can adjust the displayed order.
 4. Only reviewed, included, non-blank text, together with the grade
    and objective, is used for question generation.
 5. The application returns one slot per Bloom level.
    A slot may contain a draft question or an abstention.
+   Request summaries keep partial drafts, all abstentions,
+   incomplete results, and invalid results distinct.
    Drafts carry structured cognitive explanation and, where the
    level requires them, assumptions, evaluation criteria, or a
    creation rubric with stated source or objective origins.
 6. The teacher edits, approves, or rejects each draft separately.
+   Unsaved edits to the same question must be explicitly saved or
+   discarded before that question can be approved.
+   A first approval stays in question review; it does not jump to
+   the preview.
    Draft, rejected, blocked, and outdated questions do not enter
    the preview.
-7. The preview contains approved current questions only, while the
+7. The teacher explicitly opens the preview step.
+   It contains approved current questions only, while the
    preserved originals remain available for comparison.
 
 Analysis covers the supplied full page.
@@ -101,6 +128,10 @@ page.
   No external database service, student account system, or
   container is required.
 - SAM is not part of the final runtime.
+  It was evaluated, showed no demonstrated incremental value in
+  the pilot, and was removed under an explicit scope pivot.
+  The final full-page reference is not tight automatic
+  localization.
 
 ## Source and test map
 
@@ -228,6 +259,12 @@ depending on the suite, environment variables including
 Installing the Python Playwright package from
 `requirements-dev.txt` does not by itself prove that a browser
 executable exists at `BROWSER_EXECUTABLE`.
+Not every legacy browser suite has been migrated to the guided
+navigation; each needs matching server fixtures and
+navigation-specific migration before it can support a claim for
+the final UI.
+No blanket browser-green or all-browser-files-executed claim is
+made here.
 
 ## Run the local teacher workspace
 
@@ -283,8 +320,18 @@ reverse proxy.
 Its disconnected default also makes no model request.
 Hosted Meta mode additionally requires the finite usage ledger
 described in [docs/HOSTING.md](docs/HOSTING.md).
-Support for hosted mode in this source does not mean a public
-endpoint is active.
+The public HTTPS link at
+[hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
+an earlier published build.
+For that earlier build, exact assets, the standard hosted
+launcher, protected anonymous session reads, secure session
+cookies, and the finite retained usage policy were read back on
+2026-11-02.
+The final guided UI in this source is locally verified and is not
+yet deployed there.
+That earlier read-back is not a production-quality or availability
+guarantee, and this README is not an always-current
+deployment-status statement.
 
 In hosted mode, the session expires after a configured period
 without HTTP activity.
@@ -308,31 +355,75 @@ Full scope and limits are recorded in
   [docs/VERIFICATION.md](docs/VERIFICATION.md).
   They are not current hosted totals and are not repeated here as
   moving latest numbers.
-- One genuine Meta AI demonstration completed the source and
-  question requests with HTTP 201 responses.
-  It produced six draft questions.
-  Four received provisional model-assisted developer approval, two
-  were rejected for cognitive fit, and four items remained in the
-  approved-only preview.
+  For the current guided candidate, the full local Windows root
+  run passed every applicable method, with one genuine-Linux-only
+  skip; the strict `NOT_PASS` for that skip is retained.
+  A genuine Ubuntu-on-WSL guard-module run, including the
+  counterpart of the Windows-skipped test, passed.
+  That guard run is not a full Linux root run, target-Linux proof,
+  or deployed-host evidence.
+  Local real-application HTTP and Chrome regressions for the guided
+  desktop and phone flow passed with synthetic providers,
+  including prepare-then-confirm, source review, explicit save or
+  discard before same-question approval, draft preservation,
+  distinct request outcomes, and explicit preview.
+  No new genuine Meta request was made for this final UI.
+  An earlier full Linux root run and the genuine rehearsals below
+  remain historical evidence against earlier source; they are not
+  proof of this candidate.
+- Historical latest genuine hosted rehearsal (2026-11-02,
+  earlier source): real hosted
+  source and question calls each returned HTTP 201.
+  Source effort was `max`, question effort was `high`, and the
+  selected output ceiling was 131072.
+  The question call returned six raw drafts with no abstentions.
+  After model-assisted developer source review and explicit
+  question edits and decisions, five items remained as
+  provisionally developer-reviewed preview items and one draft
+  was rejected.
+  The five preview items cover Remember 1, Understand 3, and
+  Create 1 only — not all six Bloom levels.
+  The approved-only preview, preserved originals, and evidence
+  links were verified.
+  The standard public launcher was checked after this rehearsal;
+  no second full model run occurred after that cutover.
+  The observed source request took 119.045 seconds and the
+  observed question request took 105.176 seconds.
+  Each is one observed request only, not a benchmark, typical
+  latency, or speedup claim.
+  Before this success, one hosted source attempt failed with its
+  cause still unresolved, and a later hosted question attempt
+  exhausted its earlier output ceiling.
+  Both remain failures, and the later success does not explain
+  the first source failure.
+- Historical local rehearsal (distinct from the hosted rehearsal
+  above): six raw drafts, four provisional model-assisted
+  developer approvals, two rejections, and four preview items.
   The source page and its text are not published here.
 
 Those results do not certify transcription accuracy, Bloom level,
 grade fit, Arabic accuracy, or professional teaching quality.
-The developer decisions in the genuine run were not human-teacher
-approval.
-Known nonblocking asynchronous-test and deprecation warnings in
-the baseline mean the recorded logs were not clean.
+Source review and teacher-facing edits in both rehearsals were
+model-assisted developer work, not approval by a human teacher.
+Warnings are not claimed absent, and the baseline logs were not
+clean.
 
 ## Limitations
 
-- This source supports local use by default and an optional
-  hosted launcher.
-  That support does not claim a live public endpoint.
-  No demonstration video or event submission is claimed here.
-- One development page and one genuine run do not establish
-  accuracy or calibration.
-  Two of six drafts were rejected, so acceptance of all six Bloom
-  levels is not claimed.
+- The public demonstration link at
+  [hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
+  an earlier published build, and the source also supports local
+  use by default.
+  The final guided UI is locally verified but not yet deployed.
+  No completed release of that UI, demonstration video, or event
+  submission is claimed here.
+- One development page and one successful hosted question
+  request at `high` effort do not establish accuracy or
+  calibration.
+  In that historical hosted rehearsal, one of six raw drafts was
+  rejected, and the five preview items cover Remember,
+  Understand, and Create only.
+  Acceptance of all six Bloom levels is not claimed.
 - No professional human-teacher approval has been recorded.
 - In-memory workspace content can be lost on page refresh,
   browser close, hosted session expiry, or server restart.
@@ -350,7 +441,7 @@ the baseline mean the recorded logs were not clean.
   keys to the repository.
 - The published fixtures are synthetic.
   No actual textbook page, teacher or student data, private log, or
-  screenshot from the genuine run is included.
+  screenshot from the genuine rehearsals is included.
 - A rights reference in the workspace is metadata only.
   It is not legal clearance for source material or publication.
 - Dependency licenses do not by themselves clear the rights to

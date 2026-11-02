@@ -1134,10 +1134,14 @@ def create_app(
             # payload. The maximum successful response is not
             # reserved. Repeated retained history therefore
             # eventually refuses here instead of accumulating.
+            capacity_detail = {
+                "code": "retained_capacity_exceeded",
+                "admission": "not_started",
+            }
             try:
                 frozen_cost = callable_payload_cost(frozen)
             except ValueError:
-                refuse(413, "request too large")
+                refuse(413, capacity_detail)
             reserves_after = retain_terminal_reserves(
                 state.terminal_reserves, snapshot, state.raw_status)
             reserves_after[request_id] = measure_terminal_reserve(
@@ -1156,7 +1160,7 @@ def create_app(
                     graph_cost=graph_after,
                     new_worker=(binding["op_key"], frozen_cost),
                     new_context=(binding["op_key"], context)):
-                refuse(413, "request too large")
+                refuse(413, capacity_detail)
             signal_superseded(
                 state, before_snapshot, snapshot,
                 generation=state.source_generation,

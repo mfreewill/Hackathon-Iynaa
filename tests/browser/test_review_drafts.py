@@ -26,7 +26,13 @@ a dirty region B draft survives an acknowledged region A commit,
 region Cancel resets only its own last-acknowledged state with
 no request, a dirty question B editor survives sibling A
 approval while the preview keeps acknowledged wording, and
-question Cancel resets only its own editor. Before generation
+question Cancel resets only its own editor. Setup prepares the
+page, shows its exact preview for inspection and confirms it
+before source analysis; region text/label fields open through
+``region-edit``, generation starts from the source step, a
+question with unsaved edits cannot be approved until those
+edits are explicitly saved or discarded, and the preview is
+reached through workflow navigation. Before generation
 both canonical ``EDITED_A``/``EDITED_B`` texts are committed,
 because the original provider deliberately rejects other text.
 """
@@ -235,22 +241,55 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
             "buffer": self.png_bytes})
         # The browser page-number field is one-based.
         page.get_by_label("رقم الصفحة", exact=True).fill("1")
-        with page.expect_response(
-                lambda item: item.request.method == "POST"
-                and urlsplit(item.url).path
-                == "/api/session/source-analysis"
-                and item.status == 201,
-                timeout=ASSERT_TIMEOUT_MS):
-            page.get_by_role(
-                "button", name="بدء تحليل الصفحة", exact=True).click()
+        self.click_expect(
+            page, "POST", "/api/session/start", 201,
+            self.tid(page, "prepare-page"))
+        self.assertEqual(
+            [entry for entry in self.requests_log
+             if entry["method"] == "POST"
+             and entry["path"] == "/api/session/source-analysis"],
+            [])
+        confirm = self.tid(page, "confirm-page")
+        expect(confirm).to_be_enabled(timeout=ASSERT_TIMEOUT_MS)
+        page.wait_for_function(
+            "() => { const el = document.querySelector("
+            "\"[data-testid='source-preview']\");"
+            " if (!el) return false;"
+            " const img = el.tagName === 'IMG'"
+            " ? el : el.querySelector('img');"
+            " return !!img && img.complete"
+            " && img.naturalWidth > 0; }",
+            timeout=ASSERT_TIMEOUT_MS)
+        preview = self.tid(page, "source-preview")
+        if preview.count() == 0 or not preview.is_visible():
+            self.tid(page, "pane-tab-source").click()
+            expect(preview).to_be_visible(
+                timeout=ASSERT_TIMEOUT_MS)
+            self.tid(page, "pane-tab-work").click()
+            expect(confirm).to_be_enabled(
+                timeout=ASSERT_TIMEOUT_MS)
+        self.click_expect(
+            page, "POST", "/api/session/source-analysis", 201,
+            confirm)
         snapshot = self.snapshot(context)
         self.assertEqual(len(snapshot["regions"]), 2)
+        expect(self.tid(page, "stage-source-review")
+               ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
         expect(page.get_by_test_id("region-list")).to_be_visible(
             timeout=ASSERT_TIMEOUT_MS)
         return snapshot
 
+    def open_region_editor(self, item):
+        text_input = self.tid(item, "region-current-text-input")
+        if text_input.count() == 0 or not text_input.is_visible():
+            self.tid(item, "region-edit").click()
+        expect(text_input).to_be_visible(
+            timeout=ASSERT_TIMEOUT_MS)
+        return text_input
+
     def commit_region(self, page, region, text, label, inclusion):
         item = self.region_item(page, region)
+        self.open_region_editor(item)
         self.tid(item, "region-current-text-input").fill(text)
         self.tid(item, "region-current-label-input").fill(label)
         self.tid(item, "region-inclusion-input").select_option(inclusion)
@@ -260,6 +299,11 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
                 "button", name="حفظ مراجعة المقطع", exact=True))
 
     def generate_questions(self, context, page):
+        work_pane = self.tid(page, "work-pane")
+        if work_pane.get_attribute("data-active-step") != "source":
+            self.tid(page, "workflow-nav-source").click()
+            expect(self.tid(page, "stage-source-review")
+                   ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
         button = page.get_by_role(
             "button", name="اعتماد المصدر وتوليد الأسئلة", exact=True)
         expect(button).to_be_enabled(timeout=ASSERT_TIMEOUT_MS)
@@ -321,6 +365,7 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
             details_b = item_b.locator("details").first
             details_b.locator("summary").click()
             self.assertTrue(details_b.evaluate("node => node.open"))
+            self.open_region_editor(item_b)
             self.tid(item_b, "region-current-text-input").fill(
                 REGION_B_DRAFT_TEXT)
             self.tid(item_b, "region-current-label-input").fill(
@@ -382,9 +427,11 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
 
             # Dirty A (never committed), then dirty B again.
             item_a = self.region_item(page, region_a)
+            self.open_region_editor(item_a)
             self.tid(item_a, "region-current-text-input").fill(
                 REGION_A_DRAFT_TEXT)
             item_b = self.region_item(page, ack_b)
+            self.open_region_editor(item_b)
             self.tid(item_b, "region-current-text-input").fill(
                 REGION_B_DRAFT_TEXT)
             self.tid(item_b, "region-current-label-input").fill(
@@ -441,9 +488,12 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
                 journey.EDITED_B_WORDING)
             handle_b = card_b.element_handle()
 
-            # Approve sibling A through its real card action. The
-            # server approves A's acknowledged wording, not either
-            # local draft.
+            # A cannot be approved with unsaved edits. Discard
+            # only A explicitly, then approve its acknowledged
+            # wording through its real card action.
+            expect(self.tid(card_a, "question-approve")
+                   ).to_be_disabled(timeout=ASSERT_TIMEOUT_MS)
+            self.tid(card_a, "question-edit-cancel").click()
             self.approve_question(page, question_a)
             acknowledged = self.snapshot(context)
             ack_a = self.question_by_id(
@@ -461,6 +511,11 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
                 self.tid(card_b, "question-edit-question")
             ).to_have_value(
                 journey.EDITED_B_WORDING, timeout=ASSERT_TIMEOUT_MS)
+
+            expect(self.tid(page, "work-pane")).to_have_attribute(
+                "data-active-step", "questions",
+                timeout=ASSERT_TIMEOUT_MS)
+            self.tid(page, "workflow-nav-preview").click()
 
             # The preview is exactly the server's preview entry for
             # A: acknowledged approved wording, no local draft text.
@@ -480,6 +535,14 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
                 QUESTION_A_DRAFT_WORDING.strip(), preview_text)
             self.assertNotIn(
                 journey.EDITED_B_WORDING.strip(), preview_text)
+            self.tid(page, "preview-return").click()
+            self.assertTrue(
+                self.same_node(
+                    handle_b, self.question_card(page, ack_b)))
+            expect(
+                self.tid(card_b, "question-edit-question")
+            ).to_have_value(
+                journey.EDITED_B_WORDING, timeout=ASSERT_TIMEOUT_MS)
             self.assert_clean_network()
 
     def test_question_cancel_resets_only_its_own_editor_without_a_request(

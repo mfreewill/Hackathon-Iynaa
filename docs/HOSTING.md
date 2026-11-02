@@ -2,14 +2,24 @@
 
 The hosted launcher is optional.
 Local use through `launch.py` remains the default.
-Hosted mode serves the same teacher-only flow for one exact
-public hostname:
-full Arabic page, reviewed source, Bloom drafts, and explicit
-approvals before preview.
+Hosted mode serves the same teacher-only guided flow for one
+exact public hostname:
+prepare one full Arabic page reference with no model request,
+inspect the exact page, explicitly confirm analysis, review the
+source in its active step, save or discard edits explicitly,
+review Bloom drafts with save or discard before same-question
+approval, and explicitly open the approved-only preview.
 
-The intended public endpoint is
-[hackathon-iynaa.site](https://hackathon-iynaa.site).
-This document does not claim that endpoint is active.
+An earlier published build at
+[hackathon-iynaa.site](https://hackathon-iynaa.site) was read back
+on 2026-11-02.
+That dated observation does not verify the final guided UI or any
+other version; the final guided UI is locally verified and is not
+yet deployed there.
+Each deployed version requires its own version-specific read-back
+and verification.
+This document accompanies the source; it is not an always-current
+deployment-status statement.
 A ready domain or certificate does not by itself prove a live
 Meta flow.
 Command examples below use the placeholder `demo.example.com`.

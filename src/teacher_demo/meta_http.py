@@ -135,7 +135,22 @@ def _prepare_body(payload, credential, timeout_seconds):
         _invalid_request()
     if payload["model"] != meta_protocol.MODEL:
         _invalid_request()
-    if payload["reasoning"] != {"effort": meta_protocol.EFFORT}:
+    text = payload["text"]
+    if not isinstance(text, dict):
+        _invalid_request()
+    text_format = text.get("format")
+    if not isinstance(text_format, dict):
+        _invalid_request()
+    if text_format.get("type") != "json_schema":
+        _invalid_request()
+    format_name = text_format.get("name")
+    if not isinstance(format_name, str):
+        _invalid_request()
+    try:
+        stage_effort = meta_protocol._stage_effort(format_name)
+    except ValueError:
+        raise ValueError(_INVALID_REQUEST) from None
+    if payload["reasoning"] != {"effort": stage_effort}:
         _invalid_request()
     if payload["store"] is not False:
         _invalid_request()

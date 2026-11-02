@@ -379,10 +379,19 @@ def _validated_diagnostic(value, credential=None):
     return canonical
 
 
+def _stage_effort(format_name):
+    """Return the fixed reasoning effort for one exact format name."""
+    if format_name == "teacher_source_v1":
+        return EFFORT
+    if format_name == "teacher_question_v2":
+        return "high"
+    raise ValueError(_REQUEST_MALFORMED)
+
+
 def _payload(name, schema, content, max_output_tokens):
     return {
         "model": MODEL,
-        "reasoning": {"effort": EFFORT},
+        "reasoning": {"effort": _stage_effort(name)},
         "max_output_tokens": max_output_tokens,
         "store": False,
         "stream": False,

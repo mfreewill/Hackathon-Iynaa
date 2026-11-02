@@ -246,9 +246,12 @@ class HttpMetaIntegrationTest(unittest.TestCase):
             "model", "reasoning", "max_output_tokens", "store",
             "stream", "text", "input"})
         self.assertEqual(payload["model"], meta_protocol.MODEL)
+        expected_effort = (
+            "max" if format_name == "teacher_source_v1" else "high")
         self.assertEqual(
-            payload["reasoning"], {"effort": meta_protocol.EFFORT})
-        self.assertEqual(payload["reasoning"]["effort"], "max")
+            payload["reasoning"], {"effort": expected_effort})
+        self.assertEqual(
+            payload["reasoning"]["effort"], expected_effort)
         self.assertEqual(
             payload["max_output_tokens"], MAX_OUTPUT_TOKENS)
         self.assertIs(payload["store"], False)

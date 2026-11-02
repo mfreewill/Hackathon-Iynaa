@@ -345,7 +345,7 @@ class MetaProtocolTest(unittest.TestCase):
             set(payload.keys()),
         )
         self.assertEqual(EXPECTED_MODEL, payload["model"])
-        self.assertEqual({"effort": EXPECTED_EFFORT},
+        self.assertEqual({"effort": "high"},
                          payload["reasoning"])
         self.assertEqual(2048, payload["max_output_tokens"])
         self.assertIs(False, payload["store"])

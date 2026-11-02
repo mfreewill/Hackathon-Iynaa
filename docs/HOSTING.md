@@ -75,6 +75,26 @@ A missing, corrupt, or mismatched store refuses startup.
 Starting the process makes no model request.
 Here `--timeout-seconds` bounds one Meta request.
 
+## Model stages and output budget
+
+Both model stages use `muse-spark-1.3`.
+Source reading runs at reasoning effort `max`.
+Question generation runs at reasoning effort `high`.
+The effort follows the fixed request format for each stage.
+It is not a caller or launcher setting.
+
+`max_output_tokens` is one shared ceiling for a single call.
+Reasoning tokens and visible output tokens both count
+against it.
+They are not separate budgets.
+The operator-selected value is 131072.
+A ceiling value alone does not guarantee a completed
+response.
+
+These settings state configuration only.
+Any effect on speed or quality requires measurement.
+No speed or quality improvement is claimed here.
+
 ## Finite usage ledger
 
 The store is a local SQLite file.

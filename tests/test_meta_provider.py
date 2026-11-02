@@ -524,11 +524,13 @@ class MetaProviderTest(unittest.TestCase):
             self.assertEqual(call["payload"], expected_payload)
             self.assertEqual(
                 call["payload"]["model"], meta_protocol.MODEL)
+            expected_effort = (
+                "max" if label == "source" else "high")
             self.assertEqual(
                 call["payload"]["reasoning"],
-                {"effort": meta_protocol.EFFORT})
+                {"effort": expected_effort})
             self.assertEqual(call["payload"]["reasoning"]["effort"],
-                             "max")
+                             expected_effort)
             self.assertEqual(
                 call["payload"]["max_output_tokens"],
                 _MAX_OUTPUT_TOKENS)

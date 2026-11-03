@@ -639,6 +639,9 @@ class TestLocalLaunch(unittest.TestCase):
             "/assets/review-render.js": (
                 "review-render.js",
                 "text/javascript; charset=utf-8"),
+            "/assets/studio.js": (
+                "studio.js", "text/javascript; charset=utf-8"),
+            "/assets/cairo.ttf": ("cairo.ttf", "font/ttf"),
         }
         self.assertTrue(dict(http_client._ASSETS) == expected_assets)
         run_payload = mock.Mock(

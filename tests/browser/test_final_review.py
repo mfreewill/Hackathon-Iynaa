@@ -4,9 +4,10 @@ Exactly two focused cases in one ordinary ``unittest.TestCase``.
 The shared browser machinery is reused by importing
 ``test_review_drafts`` as a module and instantiating its test
 class only inside each method; nothing here inherits or aliases
-that class. Setup/navigation/editor-open interactions of the
-shared helpers are migrated to the final UI separately by the
-parent; the helpers are reused exactly as supplied.
+that class. Shared setup now chooses the file first and
+question actions select the retained card through studio
+question navigation at action/visibility boundaries only;
+snapshot and locator observation never navigates.
 
 The harness serves the app with the existing server-only
 synthetic ``ControlsProvider`` (not Meta); this module imports
@@ -253,6 +254,7 @@ class FinalReviewBrowserTests(unittest.TestCase):
                    ).to_be_disabled(timeout=timeout)
             expect(helper.tid(card_b, "question-approve")
                    ).to_be_disabled(timeout=timeout)
+            helper.ensure_question_visible(card_a)
             draft_status = helper.tid(card_a, "question-draft-status")
             expect(draft_status).to_be_visible(timeout=timeout)
             status_text = draft_status.text_content() or ""
@@ -324,6 +326,7 @@ class FinalReviewBrowserTests(unittest.TestCase):
             # any optional details disclosure is opened, and the
             # evidence keeps its raw/current source region IDs.
             card_a = helper.question_card(page, ack_a)
+            helper.ensure_question_visible(card_a)
             expect(helper.tid(card_a, "question-heading")
                    ).to_be_visible(timeout=timeout)
             guidance = helper.tid(card_a, "question-guidance")
@@ -386,6 +389,7 @@ class FinalReviewBrowserTests(unittest.TestCase):
             # Explicit save of B is a genuine PATCH and is not an
             # approval; only the later explicit approval adds the
             # second preview entry with the new saved wording.
+            helper.ensure_question_visible(card_b)
             helper.click_expect(
                 page, "PATCH", helper.question_path(question_b), 200,
                 helper.tid(card_b, "question-edit-commit"))

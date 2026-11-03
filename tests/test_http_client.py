@@ -91,7 +91,7 @@ class HttpClientRegistrationTests(unittest.TestCase):
         expected_policy = (
             "default-src 'none'; script-src 'self'; "
             "style-src 'self'; img-src 'self' data: blob:; "
-            "connect-src 'self'; font-src 'none'; "
+            "connect-src 'self'; font-src 'self'; "
             "base-uri 'none'; form-action 'self'; "
             "frame-ancestors 'none'")
         with TestClient(create_app(), base_url=BASE_URL) as client:

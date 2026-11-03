@@ -47,6 +47,10 @@ class RecoveryCapacityBrowserTests(unittest.TestCase):
             objective = page.locator("#objective")
             page_number = page.locator("#page-number")
             upload = page.locator("#page-file")
+            # Open real setup settings when choose-phase hides the fields.
+            setup_settings = page.locator('[data-studio="setup-settings"]')
+            if grade.is_hidden() and setup_settings.count() > 0 and setup_settings.first.is_visible():
+                setup_settings.first.click()
             grade.fill(_fx(h.fx, "GRADE"))
             objective.fill(_fx(h.fx, "OBJECTIVE"))
             page_number.fill("1")

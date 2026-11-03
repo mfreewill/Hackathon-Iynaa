@@ -1,208 +1,267 @@
-# Hackathon Iynaa — Arabic page-to-lesson teacher demo
+# Iynaa Lesson Studio — Arabic page-to-lesson teacher tool
 
-A standalone demonstration for adult teachers.
-
-Status (2026-11-03): the guided teacher flow described here is
-publicly deployed at
-[hackathon-iynaa.site](https://hackathon-iynaa.site) and has been
-read back there.
-A new art-directed visual revision of that same flow is verified
-locally and is pending public cutover; it is not yet live.
-This README accompanies the source, which also runs locally by
-default; it is not an always-current deployment-status statement.
-See [docs/HOSTING.md](docs/HOSTING.md) for the hosted launcher.
-
+Iynaa Lesson Studio is a teacher-focused source-to-lesson tool
+for adult teachers.
 The teacher supplies one Arabic textbook page (صفحة عربية).
-The application proposes source sections from that page.
-After teacher review of the source, it drafts questions for the
-six Bloom slots for further teacher review.
-Only questions the teacher explicitly approves reach the preview.
+Meta proposes source sections and, after teacher source
+review, drafts questions.
+Only questions the teacher explicitly approves reach the
+teacher lesson preview.
+In short: Arabic page → Meta proposals → teacher decisions →
+evidence-linked lesson.
 
-This is a separate implementation built around the pre-existing
-Iynaa product idea and prior educational experience.
+Status: this source describes the local Studio candidate.
+A prior guided version was served at
+[hackathon-iynaa.site](https://hackathon-iynaa.site).
+These documents do not assert a Studio public cutover and do
+not by themselves establish which build is live.
+Any later cutover needs an exact-version read-back.
+This README accompanies the source, which also runs locally
+by default.
+See [docs/HOSTING.md](docs/HOSTING.md) for the optional
+hosted launcher.
+
+This is a separate implementation built around the
+pre-existing Iynaa product idea and prior educational
+experience.
 It is not a publication of private Iynaa code.
 It is a teacher-only workspace, not a released child-facing
 service.
 The project repository is
 [github.com/mfreewill/Hackathon-Iynaa](https://github.com/mfreewill/Hackathon-Iynaa).
-It was prepared in the context of the Meta Global AI Developer
-Hackathon and its `Build for Your World` theme.
+It was prepared in the context of the Meta Global AI
+Developer Hackathon and its `Build for Your World` theme.
+No organizer endorsement or guaranteed eligibility is
+claimed.
 
-## Why this is not a generic education chatbot
+## What Studio is — and is not
 
-- There is no open-ended student chat and there are no student
-  accounts.
-- Work starts from one supplied Arabic page, not from an unbounded
-  prompt.
-- Source text is proposed first and must be reviewed before any
-  question generation.
-- Supplied and reviewed text is not silently stripped or normalized.
-- Questions are versioned, structured, source-anchored proposals,
-  not free-form chat replies.
-- Each question needs an explicit teacher edit, approval, or
-  rejection decision.
-- Raw page material and raw model drafts stay distinguishable from
-  teacher-reviewed text, decisions, and preview items.
-- Editing a source or question dependency can invalidate a prior
-  approval.
+Studio is a new composition of the same teacher flow:
+distinct creation, configuration, and confirmation steps,
+original-versus-reviewed source, a focused individual
+question navigator, and a teacher lesson preview.
+It is not a mere restyling of the prior guided flow and it
+is not a clone of a full existing Iynaa platform.
+The public API, domain, transport, and approval rules are
+unchanged.
+
+It is also not a generic education chatbot:
+
+- There is no open-ended student chat and there are no
+  student accounts.
+- Work starts from one supplied Arabic page, not from an
+  unbounded prompt.
+- Source text is proposed first and must be reviewed
+  before any question generation.
+- Supplied and reviewed text is not silently stripped or
+  normalized.
+- Questions are versioned, structured, source-anchored
+  proposals, not free-form chat replies.
+- Each question needs an explicit teacher edit, approval,
+  or rejection decision.
+- Raw page material and raw model drafts stay
+  distinguishable from teacher-reviewed text, decisions,
+  and preview items.
+- Editing a source or question dependency can invalidate a
+  prior approval.
 - Approval is never restored automatically.
+
+No new export, accounts, persistence, or other scope is
+added by this description.
 
 ## Teacher-controlled flow
 
-Choose file, grade, goal, and page → prepare → inspect → confirm
-analysis → review and choose included sections → generate →
-edit / approve / reject → preview.
+Create and configure a page → confirm analysis → compare
+original and reviewed source → generate → review one
+question at a time → explicitly open the lesson preview.
 
-1. The teacher uploads a page file, selects one file-page, and
-   sets the grade and learning objective, then clicks
-   تهيئة الصفحة (Prepare page).
-   Preparation shows the page reference only; it sends no model
-   request.
-2. The teacher inspects the exact page, then clicks
-   تحليل هذه الصفحة (Analyze this page) to confirm and send the
-   source request.
+1. By default, file selection is first: the teacher
+   chooses a page file and selects one file-page, then
+   sets the grade and learning objective, then prepares
+   the page.
+   An explicit optional no-file path remains available for
+   setting grade and goal before a file is chosen.
+   Preparation shows the page reference only; it sends no
+   model request.
+2. The teacher inspects the exact page, then explicitly
+   confirms analysis to send the source request.
    No model call happens before that confirmation.
-   In explicit Meta mode, the application then proposes source
-   sections for the full page, with a summary of current review
-   flags where attention is needed and the full raw flag details
-   available behind a disclosure.
-3. Work is guided one active step at a time: source review,
-   question review, then preview.
-   Explicit navigation between available steps does not reset the
-   workspace.
-   In source review, section text is shown with a flag summary
-   before any optional edit; the exact full flag details remain
-   available behind a disclosure.
+   In explicit Meta mode, Meta then proposes source
+   sections for the full page.
+3. Source review keeps the original proposal and the
+   reviewed text distinct.
+   A summary of current review flags is shown where
+   attention is needed, with the full flag details behind
+   a disclosure.
    The teacher saves or discards edits explicitly, decides
-   whether each section is included, excluded, or unresolved, and
-   can adjust the displayed order.
-4. Only reviewed, included, non-blank text, together with the grade
-   and objective, is used for question generation.
+   whether each section is included, excluded, or
+   unresolved, and can adjust the displayed order.
+4. Only reviewed, included, non-blank text, together with
+   the grade and objective, is used for question
+   generation.
 5. The application returns one slot per Bloom level.
    A slot may contain a draft question or an abstention.
-   Request summaries keep partial drafts, all abstentions,
-   incomplete results, and invalid results distinct.
-   Drafts carry structured cognitive explanation and, where the
-   level requires them, assumptions, evaluation criteria, or a
-   creation rubric with stated source or objective origins.
-6. The teacher edits, approves, or rejects each draft separately.
-   Unsaved edits to the same question must be explicitly saved or
-   discarded before that question can be approved.
-   A first approval stays in question review; it does not jump to
-   the preview.
-   Draft, rejected, blocked, and outdated questions do not enter
-   the preview.
-7. The teacher explicitly opens the preview step.
+   The generation failure or abstention summary remains
+   readable; full slot outcomes and raw technical metadata
+   are shown on demand behind a disclosure.
+   Partial drafts, all abstentions, incomplete results,
+   and invalid results stay distinct.
+   Drafts carry structured cognitive explanation and,
+   where the level requires them, assumptions, evaluation
+   criteria, or a creation rubric with stated source or
+   objective origins.
+6. The question navigator focuses one question at a time.
+   Same keyed drafts are retained through question and
+   stage navigation.
+   Unsaved edits to the same question must be explicitly
+   saved or discarded before that question can be
+   approved.
+   Approval is never automatic.
+   A first approval stays in question review; it does not
+   jump to the preview.
+   Draft, rejected, blocked, and outdated questions do
+   not enter the preview.
+7. The teacher explicitly opens the lesson preview.
+   Preview is never automatic.
    It contains approved current questions only, while the
    preserved originals remain available for comparison.
 
 Analysis covers the supplied full page.
-It does not claim tight localization of a region or passage on the
-page.
+Evidence is the full-page original; the application does
+not claim tight localization of a region or passage on
+the page.
 
-## Visual revision
+## Bundled assets and content security
 
-The local revision noted in Status above restyles the same flow
-without changing it: a modern right-to-left composition for adult
-teachers, an original inline vector book / learning-growth
-illustration coded by Meta (not image-model output), and
-purposeful CSS with finite entrance and action transitions that
-respect reduced-motion settings.
-The file control is a true Arabic accessible selector backed by
-the native file picker.
-Temporary-work warnings show a compact summary with the exact
-full notices still accessible, while active errors and expiry
-stay visible; source flags likewise use summary plus full-details
-disclosure (see the flow above).
-No runtime dependency, network call, or content-security
-relaxation is added.
+This version adds exactly two bundled same-origin assets
+to the fixed client surface: `/assets/studio.js` and
+`/assets/cairo.ttf`.
+These are in addition to the setup shell and its existing
+stylesheet and scripts.
+No new package, runtime service, or CDN is needed.
+This is distinct from a claim that no new asset was added.
+
+Cairo is a publicly sourced third-party font licensed
+under the SIL Open Font License 1.1 (SIL OFL 1.1).
+It is not AI-generated and not Meta-generated.
+See `docs/THIRD_PARTY_NOTICES.md` and
+`src/teacher_demo/static/fonts/OFL.txt` for the notice and
+license text.
+
+The content-security policy allows `font-src 'self'`
+only.
+It uses `default-src 'none'`, allows no external scripts,
+styles, or fonts, and allows no eval or inline relaxation.
+There is no generic static-path exposure: client files
+are served only through the fixed route mapping above.
+
+The composition is an original right-to-left Studio
+layout for adult teachers, with finite entrance and action
+transitions that respect reduced-motion settings and a
+true Arabic file selector backed by the native file
+picker.
+Temporary-work warnings keep a compact summary with the
+exact full notices still accessible, while active errors
+and expiry stay visible; source flags likewise use
+summary plus full-details disclosure.
 
 ## Technical notes
 
-- Source identity binds the page, its selected rendering, and its
-  hashes.
-  Evidence quotes must resolve exactly, codepoint for codepoint, in
-  the current reviewed text of the cited section.
-- Approval depends on the question, its supporting sections, any
-  required order relationships, and the workspace grade and
-  objective.
-  A real change to a dependency revokes or outdates the affected
-  approvals only.
+- Source identity binds the page, its selected rendering,
+  and its hashes.
+  Evidence quotes must resolve exactly, codepoint for
+  codepoint, in the current reviewed text of the cited
+  section.
+- Approval depends on the question, its supporting
+  sections, any required order relationships, and the
+  workspace grade and objective.
+  A real change to a dependency revokes or outdates the
+  affected approvals only.
   Changing a value back does not resurrect an approval.
-- Per-field authorship distinguishes model wording from teacher
-  edits.
-  Approval alone does not make a question teacher-authored.
+- Per-field authorship distinguishes model wording from
+  teacher edits.
+  Approval alone does not make a question
+  teacher-authored.
 - The HTTP workspace uses bounded request and generation
-  lifecycles, explicit request and generation identity, and named
-  cancellation and unknown-outcome states instead of treating every
-  outcome as success.
-- Explicit Meta mode uses a one-send streaming adapter to Meta AI
-  for page understanding and source-grounded question drafting.
+  lifecycles, explicit request and generation identity,
+  and named cancellation and unknown-outcome states
+  instead of treating every outcome as success.
+- Explicit Meta mode uses a one-send streaming adapter to
+  Meta AI for page understanding and source-grounded
+  question drafting.
   Diagnostic metadata is bounded and value-free.
   Error messages do not echo caller text or credentials.
 - Both launchers listen on IPv4 loopback only.
-  Uploaded pages, reviewed text, drafts, decisions, and preview
-  state live in the running process memory only.
+  Uploaded pages, reviewed text, drafts, decisions, and
+  preview state live in the running process memory only.
   They are not written to disk.
-  The one durable exception is optional hosted usage accounting.
-  It stores metadata only in a local SQLite file: the fixed
-  policy, the spent attempt count, the last attempt start, and
-  whether the window has closed.
+  The one durable exception is optional hosted usage
+  accounting.
+  It stores metadata only in a local SQLite file: the
+  fixed policy, the spent attempt count, the last attempt
+  start, and whether the window has closed.
   It stores no keys, page content, or drafts.
-  No external database service, student account system, or
-  container is required.
+  No external database service, student account system,
+  or container is required.
 - SAM is not part of the final runtime.
-  It was evaluated, showed no demonstrated incremental value in
-  the pilot, and was removed under an explicit scope pivot.
+  It was evaluated, showed no demonstrated incremental
+  value in the pilot, and was removed under an explicit
+  scope pivot.
   The final full-page reference is not tight automatic
   localization.
 
 ## Source and test map
 
-- `launch.py` — local launcher for the loopback teacher workspace.
-- `hosted_launch.py` — optional hostname-bound hosted launcher.
+- `launch.py` — local launcher for the loopback teacher
+  workspace.
+- `hosted_launch.py` — optional hostname-bound hosted
+  launcher.
   See [docs/HOSTING.md](docs/HOSTING.md).
-- `example_offline.py` — provider-free offline journey covering
-  provisional questions, approval, and invalidation after an edit.
-- `src/teacher_demo/` — teacher domain, source and versioned
-  question protocols, page decoding, HTTP application, hosted
-  usage accounting, and the Meta protocol, stream, transport, and
-  HTTP modules.
-- `src/teacher_demo/static/` — the Arabic right-to-left browser
-  client: `index.html`, `workspace.css`, `workspace.js`,
-  `review.js`, and `review-render.js`.
+- `example_offline.py` — provider-free offline journey
+  covering provisional questions, approval, and
+  invalidation after an edit.
+- `src/teacher_demo/` — teacher domain, source and
+  versioned question protocols, page decoding, HTTP
+  application, hosted usage accounting, and the Meta
+  protocol, stream, transport, and HTTP modules.
+- `src/teacher_demo/static/` — the Arabic right-to-left
+  browser client: `index.html`, `workspace.css`,
+  `workspace.js`, `review.js`, `review-render.js`,
+  `studio.js`, and `cairo.ttf`.
   No frontend build step or bundler is required.
-- `tools/generate_tls_fixtures.py` — explicit local generator for
-  synthetic TLS test fixtures.
-- `tests/` — root `unittest` suites for the domain, protocols, page
-  decoding, HTTP journeys and safety, operation lifecycles, and
-  Meta transport behavior with synthetic providers and fixtures.
+- `tools/generate_tls_fixtures.py` — explicit local
+  generator for synthetic TLS test fixtures.
+- `tests/` — root `unittest` suites for the domain,
+  protocols, page decoding, HTTP journeys and safety,
+  operation lifecycles, and Meta transport behavior with
+  synthetic providers and fixtures.
 - `tests/browser/` — separate real-browser suites.
-  They are not included in root test discovery and require their
-  own served application and environment variables, described
-  below.
+  They are not included in root test discovery and require
+  their own served application and environment variables,
+  described below.
 
 ## Requirements
 
 - Python 3.11.
   The historical baseline measurements in
-  [docs/VERIFICATION.md](docs/VERIFICATION.md) were recorded on
-  Python 3.11.15.
+  [docs/VERIFICATION.md](docs/VERIFICATION.md) were
+  recorded on Python 3.11.15.
 - To run the local application, install `requirements.txt`.
-  It directly pins FastAPI, Starlette, Pillow, pypdfium2, and
-  Uvicorn.
-- To run the root tests and generate the local TLS fixtures,
-  install `requirements-dev.txt`.
-  It includes the runtime requirements and directly pins HTTPX,
-  Playwright, and cryptography for the tests.
+  It directly pins FastAPI, Starlette, Pillow, pypdfium2,
+  and Uvicorn.
+- To run the root tests and generate the local TLS
+  fixtures, install `requirements-dev.txt`.
+  It includes the runtime requirements and directly pins
+  HTTPX, Playwright, and cryptography for the tests.
 
-The Python 3.11, development-dependency, and local TLS-fixture
-setup in this README is current.
+The Python 3.11, development-dependency, and local
+TLS-fixture setup in this README is current.
 Older domain-document instructions that described a
-dependency-free setup or Python 3.14 test commands are superseded
-for installation and testing.
+dependency-free setup or Python 3.14 test commands are
+superseded for installation and testing.
 
-No packaging or frontend build step is needed to run the launcher.
+No packaging or frontend build step is needed to run the
+launcher.
 
 ## Verification commands
 
@@ -238,17 +297,20 @@ python -B example_offline.py
 python -B launch.py --port 8000
 ```
 
-The `meta_http_tls` directory must be newly created and empty.
-The generator refuses a missing, nonempty, wrong-type, link, or
-reparse destination and does not overwrite existing output.
+The `meta_http_tls` directory must be newly created and
+empty.
+The generator refuses a missing, nonempty, wrong-type,
+link, or reparse destination and does not overwrite
+existing output.
 Do not point it at a populated directory.
-The final launch command starts the long-running local server.
+The final launch command starts the long-running local
+server.
 Stop it in the usual way when that check is finished.
 
 Use the root-test command exactly as shown.
 Do not add Python's `-I` or `-E` flags.
-The TLS tests inspect the ambient behavior that those flags would
-alter.
+The TLS tests inspect the ambient behavior that those
+flags would alter.
 
 The offline example is a contract demonstration.
 It is not a model-quality or lesson-readiness claim.
@@ -256,44 +318,46 @@ It is not a model-quality or lesson-readiness claim.
 ### Local TLS test fixtures
 
 `tools/generate_tls_fixtures.py` is a test-only utility.
-It has no default destination and must be given an existing empty
-directory through `--output`, as above.
+It has no default destination and must be given an
+existing empty directory through `--output`, as above.
 Each run freshly generates only `ca.pem`, `server.pem`,
-`wrong-name.pem`, and `server-key.pem` for local test consumers.
-The temporary CA private key stays in memory and is not written.
+`wrong-name.pem`, and `server-key.pem` for local test
+consumers.
+The temporary CA private key stays in memory and is not
+written.
 
 These fixtures are synthetic test material only.
-Never use them as production certificates, publish the generated
-server key, or install the generated CA into a system or browser
-trust store.
-Generated PEM files should be excluded from a clean source copy
-and regenerated locally through this explicit step.
+Never use them as production certificates, publish the
+generated server key, or install the generated CA into a
+system or browser trust store.
+Generated PEM files should be excluded from a clean
+source copy and regenerated locally through this explicit
+step.
 
 ### Browser tests
 
-Root discovery does not recurse into `tests/browser` and is not
-browser proof.
+Root discovery does not recurse into `tests/browser` and
+is not browser proof.
 Do not run blanket browser discovery against the default
 disconnected mode.
 
-Browser suites require a separately served application and,
-depending on the suite, environment variables including
-`BROWSER_BASE_URL`, `BROWSER_EXECUTABLE`, and
+Browser suites require a separately served application
+and, depending on the suite, environment variables
+including `BROWSER_BASE_URL`, `BROWSER_EXECUTABLE`, and
 `BROWSER_ARTIFACT_DIR`.
 Installing the Python Playwright package from
-`requirements-dev.txt` does not by itself prove that a browser
-executable exists at `BROWSER_EXECUTABLE`.
-Not every legacy browser suite has been migrated to the guided
-navigation; each needs matching server fixtures and
-navigation-specific migration before it can support a claim for
-the guided or art-directed UI.
-No blanket browser-green or all-browser-files-executed claim is
-made here.
+`requirements-dev.txt` does not by itself prove that a
+browser executable exists at `BROWSER_EXECUTABLE`.
+Each browser suite needs matching server fixtures and
+navigation-specific alignment before it can support a
+claim for the Studio composition.
+No blanket browser-green or all-browser-files-executed
+claim is made here.
 
 ## Run the local teacher workspace
 
-With an activated Python 3.11 environment containing at least the
-runtime requirements, run:
+With an activated Python 3.11 environment containing at
+least the runtime requirements, run:
 
 ```text
 python -B launch.py --port 8000
@@ -304,11 +368,12 @@ The launcher serves one process on IPv4 loopback only.
 
 ### Default disconnected mode
 
-The default command makes no model request and uses no key, even if
-the Meta environment variable happens to be present.
-The workspace reports the provider as unavailable while preserving
-the supplied page, reference material, and settings in the running
-session.
+The default command makes no model request and uses no
+key, even if the Meta environment variable happens to be
+present.
+The workspace reports the provider as unavailable while
+preserving the supplied page, reference material, and
+settings in the running session.
 Disconnected mode does not fabricate a model result.
 
 ### Explicit Meta mode
@@ -321,47 +386,50 @@ python -B launch.py --port 8000 --meta --max-output-tokens <INTEGER_AT_LEAST_16>
 ```
 
 For that mode only, set an authorized application key as
-`HACKATHON_IYNAA_META_API_KEY` in the server process environment
-before starting the launcher.
-Use a local or host secret mechanism outside the repository.
-The launcher does not read `.env` automatically, and this README
-contains no key value.
+`HACKATHON_IYNAA_META_API_KEY` in the server process
+environment before starting the launcher.
+Use a local or host secret mechanism outside the
+repository.
+The launcher does not read `.env` automatically, and this
+README contains no key value.
 
 Keep the key server-side only.
-Never put a live value in the repository, browser code, screenshots,
-issues, or logs.
-Starting the process makes no model request and is not by itself
-evidence of a live Meta result.
+Never put a live value in the repository, browser code,
+screenshots, issues, or logs.
+Starting the process makes no model request and is not by
+itself evidence of a live Meta result.
 
 ### Optional hosted mode
 
 Hosted mode is separate from the local default above.
 The local launcher stays disconnected unless Meta mode is
 explicit, as described in the two subsections above.
-The optional hosted launcher serves the same teacher flow for
-one exact public hostname, still on loopback behind an HTTPS
-reverse proxy.
+The optional hosted launcher serves the same teacher flow
+for one exact public hostname, still on loopback behind
+an HTTPS reverse proxy.
 Its disconnected default also makes no model request.
-Hosted Meta mode additionally requires the finite usage ledger
-described in [docs/HOSTING.md](docs/HOSTING.md).
-See Status (2026-11-03) at the top for what is live and what is
-pending cutover.
-On 2026-11-02, exact assets, the standard hosted launcher,
-protected anonymous session reads, secure session cookies, and
-the finite retained usage policy were read back for the build
-then live.
-That read-back is not a production-quality or availability
-guarantee.
+Hosted Meta mode additionally requires the finite usage
+ledger described in [docs/HOSTING.md](docs/HOSTING.md).
+See Status at the top for what these documents do and do
+not assert about what is live.
+On 2026-11-02, exact assets, the standard hosted
+launcher, protected anonymous session reads, secure
+session cookies, and the finite retained usage policy
+were read back for the build then live.
+That read-back is not a production-quality or
+availability guarantee.
 
-In hosted mode, the session expires after a configured period
-without HTTP activity.
+In hosted mode, the session expires after a configured
+period without HTTP activity.
 Typing that sends no request does not renew it.
 Active server work is retained.
 The browser confirmation window is conservative.
-It may withdraw current approvals and the preview while a long
-or stalled response is still pending.
-Displayed drafts and read-only context remain visible locally.
-An explicit reload starts again and may lose unsaved work.
+It may withdraw current approvals and the preview while a
+long or stalled response is still pending.
+Displayed drafts and read-only context remain visible
+locally.
+An explicit reload starts again and may lose unsaved
+work.
 There is no automatic retry, cancellation, or heartbeat.
 Local mode has no hosted idle lease.
 
@@ -370,144 +438,166 @@ Local mode has no hosted idle lease.
 Full scope and limits are recorded in
 [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
-- Root and browser counts for the first public-code baseline are
-  recorded as historical results in
+- Root and browser counts for the first public-code
+  baseline are recorded as historical results in
   [docs/VERIFICATION.md](docs/VERIFICATION.md).
-  They are not current hosted totals and are not repeated here as
-  moving latest numbers.
-  On Windows, the full local root run passed every applicable
-  method, with one genuine-Linux-only skip; the strict `NOT_PASS`
-  for that skip is retained, so no headline pass is claimed on
-  that basis.
-  A genuine Ubuntu-on-WSL guard-module run, including the
-  counterpart of the Windows-skipped test, passed.
-  That guard run is not a full Linux root run, target-Linux proof,
-  or deployed-host evidence; the target-Linux full-root result
-  for the art-directed source is still pending.
-  Local real-application HTTP and Chrome regressions for the guided
-  desktop and phone flow passed with synthetic providers,
-  including prepare-then-confirm, source review, explicit save or
-  discard before same-question approval, draft preservation,
-  distinct request outcomes, and explicit preview.
-  That synthetic UI evidence is a separate layer from live-model
-  evidence: the unchanged live pipeline was exercised before the
-  artwork in the distinct run below, and no live inference is
-  claimed for the final art revision itself.
+  They are not current hosted totals and are not repeated
+  here as moving latest numbers.
+  Current final verification for this Studio source is
+  recorded separately from the exact packaged sources and
+  raw test results; it is not asserted here as complete.
+  The complete new local journey plus specific boundary
+  cases have been executed with a synthetic provider,
+  including no-file settings access and visible keyboard focus after page preparation; that
+  synthetic coverage is not exhaustive.
+  No new genuine application-model call occurred for
+  Studio.
+  Prior live-model evidence below stays bound to its
+  pre-Studio version and does not become a Studio live
+  result.
   An earlier full Linux root run and the earlier genuine
-  rehearsals below remain historical evidence against earlier
-  source.
-- Newest genuine guided run (2026-11-03, deployed pre-art guided
-  code; one private development page; one source call and one
-  question call, no retries): both calls returned HTTP 201, with
-  six raw drafts and no abstentions.
-  The source request took 237.833 seconds and the question
-  request 101.233 seconds; each is a single timing sample only,
-  not a benchmark or typical latency.
+  rehearsals below remain historical evidence against
+  earlier source.
+- Newest genuine guided run (2026-11-03, deployed
+  pre-art guided code; one private development page; one
+  source call and one question call, no retries): both
+  calls returned HTTP 201, with six raw drafts and no
+  abstentions.
+  The source request took 237.833 seconds and the
+  question request 101.233 seconds; each is a single
+  timing sample only, not a benchmark or typical latency.
   Six items reached a private preview only after explicit
   developer review that edited all six current questions,
-  guidance, and explanations and downgraded three original
-  higher Bloom labels; no evidence or source text was rewritten.
-  Effective coverage is Remember 1, Understand 4, Create 1 —
-  not all six Bloom levels.
-  This is not raw-model-perfect output and not human-teacher
-  approval, and it is a distinct run, not combined with the
-  earlier rehearsals below.
-- Earlier genuine hosted rehearsal (2026-11-02,
-  earlier source, historical): real hosted
-  source and question calls each returned HTTP 201.
-  Source effort was `max`, question effort was `high`, and the
-  selected output ceiling was 131072.
-  The question call returned six raw drafts with no abstentions.
-  After model-assisted developer source review and explicit
-  question edits and decisions, five items remained as
-  provisionally developer-reviewed preview items and one draft
-  was rejected.
-  The five preview items cover Remember 1, Understand 3, and
-  Create 1 only — not all six Bloom levels.
-  The approved-only preview, preserved originals, and evidence
-  links were verified.
-  The standard public launcher was checked after this rehearsal;
-  no second full model run occurred after that cutover.
-  The observed source request took 119.045 seconds and the
-  observed question request took 105.176 seconds.
-  Each is one observed request only, not a benchmark, typical
-  latency, or speedup claim.
-  Before this success, one hosted source attempt failed with its
-  cause still unresolved, and a later hosted question attempt
-  exhausted its earlier output ceiling.
-  Both remain failures, and the later success does not explain
-  the first source failure.
-- Historical local rehearsal (distinct from the hosted rehearsal
-  above): six raw drafts, four provisional model-assisted
-  developer approvals, two rejections, and four preview items.
+  guidance, and explanations and downgraded three
+  original higher Bloom labels; no evidence or source
+  text was rewritten.
+  Effective coverage is Remember 1, Understand 4,
+  Create 1 — not all six Bloom levels.
+  This is not raw-model-perfect output and not
+  human-teacher approval, and it is a distinct run, not
+  combined with the earlier rehearsals below.
+- Earlier genuine hosted rehearsal (2026-11-02, earlier
+  source, historical): real hosted source and question
+  calls each returned HTTP 201.
+  Source effort was `max`, question effort was `high`,
+  and the selected output ceiling was 131072.
+  The question call returned six raw drafts with no
+  abstentions.
+  After model-assisted developer source review and
+  explicit question edits and decisions, five items
+  remained as provisionally developer-reviewed preview
+  items and one draft was rejected.
+  The five preview items cover Remember 1, Understand 3,
+  and Create 1 only — not all six Bloom levels.
+  The approved-only preview, preserved originals, and
+  evidence links were verified.
+  The standard public launcher was checked after this
+  rehearsal; no second full model run occurred after that
+  cutover.
+  The observed source request took 119.045 seconds and
+  the observed question request took 105.176 seconds.
+  Each is one observed request only, not a benchmark,
+  typical latency, or speedup claim.
+  Before this success, one hosted source attempt failed
+  with its cause still unresolved, and a later hosted
+  question attempt exhausted its earlier output ceiling.
+  Both remain failures, and the later success does not
+  explain the first source failure.
+- Historical local rehearsal (distinct from the hosted
+  rehearsal above): six raw drafts, four provisional
+  model-assisted developer approvals, two rejections, and
+  four preview items.
   The source page and its text are not published here.
 
-Those results do not certify transcription accuracy, Bloom level,
-grade fit, Arabic accuracy, or professional teaching quality.
+Those results do not certify transcription accuracy,
+Bloom level, grade fit, Arabic accuracy, or professional
+teaching quality.
 Source review and teacher-facing edits in these runs were
-model-assisted developer work, not approval by a human teacher.
-Warnings are not claimed absent, and the baseline logs were not
-clean.
+model-assisted developer work, not approval by a human
+teacher.
+The six live drafts edited in the earlier rehearsals are
+not human teacher-gold and are not six validated Bloom
+levels.
+Warnings are not claimed absent, and the baseline logs
+were not clean.
+No new accuracy, latency, or quality claim is made for
+Studio here.
 
 ## Limitations
 
-- See Status (2026-11-03) at the top: the art-directed revision
-  is not yet publicly live.
-  No demonstration video or event submission is claimed here,
-  and no guaranteed learning gain is claimed anywhere.
-  The value shown is controlled, source-grounded preparation
-  with traceable teacher choices.
+- See Status at the top: these source documents do not
+  assert a Studio public cutover.
+  No demonstration video, event submission, guaranteed
+  learning gain, or public source-page rights are claimed
+  here.
+  The value shown is controlled, source-grounded
+  preparation with traceable teacher choices.
 - Single-page genuine runs do not establish accuracy or
   calibration.
-  No run above covers all six Bloom levels after review, and
-  acceptance of all six levels is not claimed.
-- No professional human-teacher approval has been recorded.
-- In-memory workspace content can be lost on page refresh,
-  browser close, hosted session expiry, or server restart.
-  The hosted usage ledger does not back up workspace content.
-- Full-page analysis is not tight passage or region localization.
-- Generated content can be wrong or unsuitable and requires adult
-  teacher review before any classroom use.
+  No run above covers all six Bloom levels after review,
+  and acceptance of all six levels is not claimed.
+- No professional human-teacher approval has been
+  recorded.
+- In-memory workspace content can be lost on page
+  refresh, browser close, hosted session expiry, or
+  server restart.
+  The hosted usage ledger does not back up workspace
+  content.
+- Full-page analysis is not tight passage or region
+  localization.
+- Generated content can be wrong or unsuitable and
+  requires adult teacher review before any classroom use.
 
 ## Data, rights, and safety
 
-- Use only textbook or other source material that the operator is
-  entitled to process.
-- Do not add real keys, private uploads, student material, local
-  databases, a hosted usage store, logs, or generated TLS private
-  keys to the repository.
+- Use only textbook or other source material that the
+  operator is entitled to process.
+- Do not add real keys, private uploads, student
+  material, local databases, a hosted usage store, logs,
+  or generated TLS private keys to the repository.
 - The published fixtures are synthetic.
-  No actual textbook page, teacher or student data, private log, or
-  screenshot from the genuine rehearsals is included.
+  No actual textbook page, teacher or student data,
+  private log, or screenshot from the genuine rehearsals
+  is included.
 - A rights reference in the workspace is metadata only.
-  It is not legal clearance for source material or publication.
-- Dependency licenses do not by themselves clear the rights to
-  publish this project or use any particular source material.
-- A `.gitignore`, if present, is accident prevention only.
+  It is not legal clearance for source material or
+  publication.
+- Dependency licenses do not by themselves clear the
+  rights to publish this project or use any particular
+  source material.
+- A `.gitignore`, if present, is accident prevention
+  only.
   It is not secret, rights, or publication clearance.
 
 ## Meta AI and development attribution
 
-Meta AI built this standalone implementation and authored its
-application code, test suites, and the original inline vector
-artwork in code (not image-model output).
-In explicit Meta mode, the application also uses Meta AI for
-page understanding and source-grounded question drafting.
-Those are distinct roles: building the implementation is separate
-from the application's runtime use of Meta AI.
-The resulting code and tests were independently checked and
-executed, as recorded in the verification report.
-This README does not claim Meta AI performed every independent
-review or all execution tooling.
-The runtime code retains the model identifier and endpoint it
-requires; this public narrative refers to the model generically
-as Meta AI.
-None of those contributions is professional teacher judgement, and
-this README claims neither human-only coding nor human-teacher
-approval.
+Meta authored the original product, application code,
+test suites, and the original inline vector artwork in
+code (not image-model output).
+In explicit Meta mode, the application also uses Meta AI
+for page understanding and source-grounded question
+drafting.
+Those are distinct roles: building the implementation is
+separate from the application's runtime use of Meta AI.
+The resulting code and tests were independently reviewed
+and executed; independent review and execution were
+separate and are not all attributed to Meta.
+This README does not claim Meta performed every
+independent review or all execution tooling.
+Cairo is third-party font software, not Meta-generated
+(see Bundled assets and content security above).
+The runtime code retains the model identifier and
+endpoint it requires; this public narrative refers to the
+model generically as Meta AI.
+None of those contributions is professional teacher
+judgement, and this README claims neither human-only
+coding nor human-teacher approval.
 
 ## License and publication status
 
 No license has been selected.
-Nothing in this README selects one or clears rights for a future
-textbook page, dependency set, hosting, or wider release.
+Nothing in this README selects one or clears rights for a
+future textbook page, dependency set, hosting, or wider
+release.
+No final video, submission, or public source-page rights
+are asserted here.

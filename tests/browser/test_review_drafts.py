@@ -32,7 +32,10 @@ before source analysis; region text/label fields open through
 ``region-edit``, generation starts from the source step, a
 question with unsaved edits cannot be approved until those
 edits are explicitly saved or discarded, and the preview is
-reached through workflow navigation. Before generation
+reached through workflow navigation. In the studio shell a
+retained question card is selected through its question
+navigation button only at action/visibility boundaries;
+locator and snapshot observation never navigates. Before generation
 both canonical ``EDITED_A``/``EDITED_B`` texts are committed,
 because the original provider deliberately rejects other text.
 """
@@ -234,11 +237,13 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
     def start_source_analysis(self, context, page):
         """Drive the existing setup form to a real source analysis."""
         page.goto("/")
-        page.get_by_label("الصف الدراسي", exact=True).fill(self.fx["GRADE"])
-        page.get_by_label("الهدف التعليمي", exact=True).fill(self.fx["OBJECTIVE"])
+        # Studio setup fields appear after an actual file choice;
+        # this order also works on the previous shell.
         page.locator("input[type='file']").set_input_files({
             "name": "synthetic-page.png", "mimeType": "image/png",
             "buffer": self.png_bytes})
+        page.get_by_label("الصف الدراسي", exact=True).fill(self.fx["GRADE"])
+        page.get_by_label("الهدف التعليمي", exact=True).fill(self.fx["OBJECTIVE"])
         # The browser page-number field is one-based.
         page.get_by_label("رقم الصفحة", exact=True).fill("1")
         self.click_expect(
@@ -251,15 +256,13 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
             [])
         confirm = self.tid(page, "confirm-page")
         expect(confirm).to_be_enabled(timeout=ASSERT_TIMEOUT_MS)
-        page.wait_for_function(
-            "() => { const el = document.querySelector("
-            "\"[data-testid='source-preview']\");"
-            " if (!el) return false;"
-            " const img = el.tagName === 'IMG'"
-            " ? el : el.querySelector('img');"
-            " return !!img && img.complete"
-            " && img.naturalWidth > 0; }",
-            timeout=ASSERT_TIMEOUT_MS)
+        preview_img = page.locator(
+            "img[data-testid='source-preview'], "
+            "[data-testid='source-preview'] img").first
+        expect(preview_img).to_have_js_property(
+            "complete", True, timeout=ASSERT_TIMEOUT_MS)
+        self.assertGreater(
+            preview_img.evaluate("el => el.naturalWidth"), 0)
         preview = self.tid(page, "source-preview")
         if preview.count() == 0 or not preview.is_visible():
             self.tid(page, "pane-tab-source").click()
@@ -327,7 +330,39 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
             region_b["current_label"], "included")
         return self.generate_questions(context, page)
 
+    def ensure_question_visible(self, card):
+        """Select a hidden retained card via studio question nav.
+
+        No-op when the card is already visible or no studio
+        navigator exists (previous shell), leaving ordinary
+        expectations to diagnose visibility. Sends no request.
+        """
+        if card.count() == 0 or card.is_visible():
+            return
+        page = card.page
+        nav = page.locator("[data-studio='question-nav']")
+        if nav.count() == 0:
+            return
+        if not nav.first.is_visible():
+            questions_nav = self.tid(page, "workflow-nav-questions")
+            if (questions_nav.count() > 0
+                    and questions_nav.first.is_visible()):
+                questions_nav.first.click()
+            if card.is_visible() or not nav.first.is_visible():
+                return
+        question_id = card.get_attribute("data-question-id")
+        buttons = nav.first.locator("button[data-question-id]")
+        for index in range(buttons.count()):
+            button = buttons.nth(index)
+            if button.get_attribute("data-question-id") == question_id:
+                button.click()
+                break
+        else:
+            return
+        expect(card).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
+
     def open_question_editor(self, card):
+        self.ensure_question_visible(card)
         wording = self.tid(card, "question-edit-question")
         if wording.count() == 0 or not wording.is_visible():
             card.get_by_role(
@@ -337,6 +372,7 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
 
     def approve_question(self, page, question):
         card = self.question_card(page, question)
+        self.ensure_question_visible(card)
         self.click_expect(
             page, "POST", self.question_path(question, "/approve"), 200,
             card.get_by_role(
@@ -493,6 +529,7 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
             # wording through its real card action.
             expect(self.tid(card_a, "question-approve")
                    ).to_be_disabled(timeout=ASSERT_TIMEOUT_MS)
+            self.ensure_question_visible(card_a)
             self.tid(card_a, "question-edit-cancel").click()
             self.approve_question(page, question_a)
             acknowledged = self.snapshot(context)

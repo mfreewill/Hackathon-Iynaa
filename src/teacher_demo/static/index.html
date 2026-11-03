@@ -8,13 +8,11 @@
 <link rel="stylesheet" href="/assets/workspace.css">
 </head>
 <body>
+<div class="studio-app" data-studio-stage="setup" data-setup-phase="choose" data-has-source="false">
 <header class="workspace-header">
   <div class="brand-band">
     <div class="brand-inner">
-      <div class="brand-row">
-        <p class="brand"><span class="brand-word">إيناع</span><span class="brand-latin" lang="en" dir="ltr">IYNAA</span></p>
-        <p class="brand-purpose">من صفحة إلى درس تراجعه أنت</p>
-      </div>
+      <p class="brand"><span class="brand-word">إيناع</span><span class="brand-latin" lang="en" dir="ltr">IYNAA</span><span class="brand-studio">استوديو الدرس</span></p>
       <div class="session-row">
         <p class="unsaved-summary">عمل مؤقت غير محفوظ</p>
         <details class="session-details" data-testid="session-details">
@@ -23,184 +21,12 @@
           <p class="hosted-session-notice" data-testid="hosted-session-notice" role="status" aria-live="polite" hidden></p>
         </details>
       </div>
-      <div class="iynaa-artwork">
-        <svg viewBox="0 0 560 320" aria-hidden="true" focusable="false">
-  <defs>
-    <radialGradient id="iynaa-art-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#F6C87E" stop-opacity="0.5"/>
-      <stop offset="45%" stop-color="#F6C87E" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#F6C87E" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="iynaa-art-cover" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#1B6B4F"/>
-      <stop offset="100%" stop-color="#0C3A2C"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-page-left" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#FFFDF4"/>
-      <stop offset="70%" stop-color="#FBF3DF"/>
-      <stop offset="100%" stop-color="#EADFC2"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-page-right" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="#EADFC2"/>
-      <stop offset="30%" stop-color="#FBF3DF"/>
-      <stop offset="100%" stop-color="#FFFDF4"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-page-flow" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0%" stop-color="#FFF7E6"/>
-      <stop offset="60%" stop-color="#DFF2E4"/>
-      <stop offset="100%" stop-color="#A9DCC0"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-leaf" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0%" stop-color="#1E7A4E"/>
-      <stop offset="60%" stop-color="#69BE8F"/>
-      <stop offset="100%" stop-color="#A9DCC0"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-stem" x1="0" y1="1" x2="1" y2="0">
-      <stop offset="0%" stop-color="#14532D"/>
-      <stop offset="100%" stop-color="#3E9C6B"/>
-    </linearGradient>
-    <linearGradient id="iynaa-art-copper" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#E09A5F"/>
-      <stop offset="100%" stop-color="#B4652F"/>
-    </linearGradient>
-    <radialGradient id="iynaa-art-orb" cx="38%" cy="34%" r="72%">
-      <stop offset="0%" stop-color="#FFE9B8"/>
-      <stop offset="100%" stop-color="#F2B25C"/>
-    </radialGradient>
-  </defs>
-  <g class="art-glow">
-    <ellipse cx="318" cy="150" rx="238" ry="136" fill="url(#iynaa-art-glow)"/>
-  </g>
-  <g class="art-arch" fill="none" stroke="#C98A4B">
-    <path opacity="0.34" stroke-width="1.4" d="M128 292 L128 158 C128 88 190 38 280 30 C370 38 432 88 432 158 L432 292"/>
-    <path opacity="0.18" stroke-width="1.2" d="M146 292 L146 162 C146 100 200 54 280 46 C360 54 414 100 414 162 L414 292"/>
-  </g>
-  <g class="art-constellation">
-    <path fill="none" stroke="#C98A4B" stroke-width="1.2" opacity="0.5" d="M352 118 L396 82 L442 92 L474 58 L508 74 M396 82 L420 46 L474 58 M442 92 L486 104 L508 74"/>
-    <path fill="none" stroke="#69BE8F" stroke-width="1.1" opacity="0.45" d="M258 102 L306 74 L352 118 M306 74 L358 60"/>
-    <circle cx="442" cy="92" r="9" fill="none" stroke="#69BE8F" stroke-width="1.2" opacity="0.5"/>
-    <circle cx="474" cy="58" r="10" fill="none" stroke="#D98F4E" stroke-width="1.2" opacity="0.45"/>
-    <circle cx="352" cy="118" r="4" fill="url(#iynaa-art-copper)"/>
-    <circle cx="396" cy="82" r="5" fill="url(#iynaa-art-orb)"/>
-    <circle cx="442" cy="92" r="4" fill="#69BE8F"/>
-    <circle cx="474" cy="58" r="5" fill="url(#iynaa-art-orb)"/>
-    <circle cx="508" cy="74" r="3.5" fill="url(#iynaa-art-copper)"/>
-    <circle cx="420" cy="46" r="3.5" fill="#A9DCC0"/>
-    <circle cx="486" cy="104" r="3" fill="#A9DCC0"/>
-    <path transform="translate(452 28)" fill="#F2B25C" opacity="0.9" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
-    <path transform="translate(524 112) scale(0.7)" fill="#F2B25C" opacity="0.75" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
-    <path transform="translate(306 44) scale(0.8)" fill="#E8B06A" opacity="0.8" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
-  </g>
-  <g class="art-stem" fill="none" stroke="url(#iynaa-art-stem)" stroke-linecap="round">
-    <path stroke-width="5" d="M280 204 C292 160 320 128 360 108 C388 94 414 88 440 90"/>
-    <path stroke-width="3" d="M306 146 C294 122 276 108 252 100"/>
-    <path stroke-width="3" d="M340 118 C336 96 342 76 358 60"/>
-    <path stroke-width="2.6" d="M388 96 C398 76 414 62 436 52"/>
-    <path stroke-width="2.2" d="M296 168 C282 152 264 144 244 142"/>
-  </g>
-  <g class="art-leaves">
-    <g transform="translate(252 100) rotate(-38) scale(1.05)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <g transform="translate(358 60) rotate(18) scale(1.1)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <g transform="translate(436 52) rotate(42) scale(0.95)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <g transform="translate(244 142) rotate(-64) scale(0.8)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <g transform="translate(440 90) rotate(66) scale(0.85)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <g transform="translate(322 134) rotate(-20) scale(0.68)">
-      <path fill="url(#iynaa-art-leaf)" d="M0 0 C-15 -7 -20 -27 -7 -42 C9 -30 11 -9 0 0 Z"/>
-      <path fill="none" stroke="#0E4A32" stroke-width="1.3" opacity="0.45" d="M-1 -3 C-3 -15 -4 -27 -6 -37"/>
-    </g>
-    <circle cx="466" cy="76" r="4" fill="url(#iynaa-art-copper)"/>
-    <circle cx="252" cy="100" r="4.5" fill="url(#iynaa-art-orb)"/>
-  </g>
-  <g class="art-book">
-    <ellipse cx="280" cy="290" rx="154" ry="10" fill="#0C3A2C" opacity="0.13"/>
-    <path fill="url(#iynaa-art-cover)" stroke="#082A1F" stroke-width="1.2" d="M280 206 C240 188 190 182 148 192 L148 268 C190 258 240 264 280 282 C320 264 370 258 412 268 L412 192 C370 182 320 188 280 206 Z"/>
-    <path fill="none" stroke="#E8B06A" stroke-width="1.3" opacity="0.5" d="M158 261 C201 252 244 258 280 274 C316 258 359 252 402 261"/>
-  </g>
-  <g class="art-pages">
-    <path fill="#E7DCC0" d="M280 204 C242 187 194 182 156 192 L156 262 C194 252 242 258 280 274 C318 258 366 252 404 262 L404 192 C366 182 318 187 280 204 Z"/>
-    <path fill="#F3EAD2" d="M280 203 C243 186 198 181 161 191 L161 259 C198 249 243 255 280 271 C317 255 362 249 399 259 L399 191 C362 181 317 186 280 203 Z"/>
-    <path fill="url(#iynaa-art-page-left)" stroke="#D9C9A3" stroke-width="1" d="M280 201 C245 185 202 179 166 189 L166 256 C202 246 245 252 280 268 Z"/>
-    <path fill="url(#iynaa-art-page-right)" stroke="#D9C9A3" stroke-width="1" d="M280 201 C315 185 358 179 394 189 L394 256 C358 246 315 252 280 268 Z"/>
-    <path fill="none" stroke="#CBB98F" stroke-width="1.4" stroke-linecap="round" d="M396 208 L403 210 M396 224 L403 226 M396 240 L403 242"/>
-    <path fill="none" stroke="#B99B5F" stroke-width="1.6" opacity="0.55" d="M280 201 L280 268"/>
-    <g class="art-page-lines" fill="none" stroke="#8FAE97" stroke-width="2" stroke-linecap="round" opacity="0.6">
-      <path d="M184 205 C214 197 242 199 264 208"/>
-      <path d="M184 221 C214 213 242 215 264 224"/>
-      <path d="M184 237 C206 231 228 232 246 238"/>
-      <path d="M296 208 C318 199 346 197 376 205"/>
-      <path d="M296 224 C318 215 346 213 376 221"/>
-      <path d="M314 238 C332 232 354 231 376 237"/>
-    </g>
-    <path fill="url(#iynaa-art-page-flow)" stroke="#B9D8C2" stroke-width="1.2" d="M394 189 C386 152 366 128 330 114 C364 104 402 118 416 146 C424 164 414 182 394 189 Z"/>
-    <path fill="none" stroke="#7FBF9E" stroke-width="1.4" opacity="0.65" d="M394 189 C384 160 366 136 340 120"/>
-    <g transform="translate(336 84) rotate(-12) scale(0.78)">
-      <path fill="url(#iynaa-art-page-flow)" stroke="#CBB98F" stroke-width="1.2" opacity="0.94" d="M-22 -13 C-8 -19 8 -19 22 -13 L22 13 C8 7 -8 7 -22 13 Z"/>
-      <path fill="none" stroke="#B99B5F" stroke-width="1.2" opacity="0.55" d="M0 -16 L0 10"/>
-    </g>
-  </g>
-  <g class="art-book-details">
-    <path fill="url(#iynaa-art-copper)" stroke="#9A5427" stroke-width="0.8" opacity="0.96" d="M270 258 C276 261 284 261 290 258 L290 296 L280 287 L270 296 Z"/>
-    <circle cx="280" cy="200" r="5.5" fill="url(#iynaa-art-orb)" stroke="#D98F4E" stroke-width="1"/>
-  </g>
-  <g class="art-particles">
-    <circle cx="292" cy="176" r="2.6" fill="#A9DCC0" opacity="0.8"/>
-    <circle cx="308" cy="154" r="2" fill="#F2B25C" opacity="0.7"/>
-    <circle cx="326" cy="134" r="3" fill="#D98F4E" opacity="0.75"/>
-    <circle cx="348" cy="112" r="2.2" fill="#A9DCC0" opacity="0.85"/>
-    <circle cx="372" cy="96" r="2.8" fill="#F2B25C" opacity="0.8"/>
-    <circle cx="402" cy="78" r="2" fill="#A9DCC0" opacity="0.7"/>
-    <circle cx="428" cy="64" r="2.6" fill="#D98F4E" opacity="0.85"/>
-    <circle cx="456" cy="44" r="2" fill="#F2B25C" opacity="0.75"/>
-    <circle cx="488" cy="88" r="2.2" fill="#A9DCC0" opacity="0.6"/>
-    <circle cx="516" cy="52" r="2.6" fill="#F2B25C" opacity="0.8"/>
-    <circle cx="236" cy="124" r="2.2" fill="#F2B25C" opacity="0.55"/>
-    <circle cx="214" cy="96" r="1.8" fill="#A9DCC0" opacity="0.5"/>
-    <circle cx="262" cy="84" r="2" fill="#D98F4E" opacity="0.6"/>
-    <circle cx="188" cy="140" r="1.7" fill="#A9DCC0" opacity="0.45"/>
-    <circle cx="486" cy="128" r="1.8" fill="#F2B25C" opacity="0.55"/>
-    <circle cx="330" cy="170" r="1.8" fill="#A9DCC0" opacity="0.6"/>
-  </g>
-</svg>
-
-      </div>
     </div>
   </div>
   <div class="status-area">
     <p class="hosted-session-expired" data-testid="hosted-session-expired" role="status" aria-live="polite" hidden></p>
     <p class="boot-error" data-testid="review-boot-error" role="alert" hidden></p>
     <p class="workspace-status" data-testid="workspace-status" role="status" aria-live="polite">جارٍ تجهيز جلسة المتصفح ووحدة المراجعة…</p>
-  </div>
-</header>
-
-<div class="pane-switch" data-testid="pane-switch" role="tablist" aria-label="تبديل العرض">
-  <button type="button" role="tab" id="pane-tab-source" data-testid="pane-tab-source" aria-selected="false" aria-controls="source-pane">المصدر</button>
-  <button type="button" role="tab" id="pane-tab-work" data-testid="pane-tab-work" aria-selected="true" aria-controls="work-pane">العمل</button>
-</div>
-
-<main class="workspace">
-  <section class="pane work-pane" data-testid="work-pane" id="work-pane" data-active-step="setup" aria-labelledby="setup-heading">
-    <ol class="stages" aria-label="مراحل مساحة العمل">
-      <li class="stage stage-current"><button type="button" data-testid="workflow-nav-setup" aria-current="step"><span class="step-index">١</span> <span class="step-label">إعداد الصفحة</span></button></li>
-      <li class="stage"><button type="button" data-testid="workflow-nav-source"><span class="step-index">٢</span> <span class="step-label">مراجعة المصدر</span></button></li>
-      <li class="stage"><button type="button" data-testid="workflow-nav-questions"><span class="step-index">٣</span> <span class="step-label">مراجعة الأسئلة</span></button></li>
-      <li class="stage"><button type="button" data-testid="workflow-nav-preview"><span class="step-index">٤</span> <span class="step-label">معاينة المعلم</span></button></li>
-    </ol>
-
     <section class="review-stage provider-operation" data-testid="provider-operation" aria-labelledby="provider-operation-heading" hidden>
       <h2 id="provider-operation-heading">طلب خدمة التحليل والتوليد</h2>
       <p class="workspace-status" data-testid="provider-operation-status" role="status" aria-live="polite"></p>
@@ -211,26 +37,161 @@
         <button class="secondary-action" type="button" data-testid="provider-operation-retry" hidden disabled>إعادة طلب تحليل المصدر</button>
       </div>
     </section>
+  </div>
+</header>
 
-    <section class="workflow-step" data-workflow-step="setup" aria-labelledby="setup-heading">
-    <h1 class="step-heading" id="setup-heading" tabindex="-1">١ إعداد الصفحة</h1>
+<div class="pane-switch" data-testid="pane-switch" role="tablist" aria-label="تبديل العرض">
+  <button type="button" role="tab" id="pane-tab-source" data-testid="pane-tab-source" aria-selected="false" aria-controls="source-pane">المصدر</button>
+  <button type="button" role="tab" id="pane-tab-work" data-testid="pane-tab-work" aria-selected="true" aria-controls="work-pane">العمل</button>
+</div>
+
+<main class="workspace">
+  <ol class="stages" aria-label="مراحل مساحة العمل">
+    <li class="stage stage-current"><button type="button" data-testid="workflow-nav-setup" aria-current="step"><span class="step-index">١</span> <span class="step-label">إعداد الصفحة</span></button></li>
+    <li class="stage"><button type="button" data-testid="workflow-nav-source"><span class="step-index">٢</span> <span class="step-label">مراجعة المصدر</span></button></li>
+    <li class="stage"><button type="button" data-testid="workflow-nav-questions"><span class="step-index">٣</span> <span class="step-label">مراجعة الأسئلة</span></button></li>
+    <li class="stage"><button type="button" data-testid="workflow-nav-preview"><span class="step-index">٤</span> <span class="step-label">معاينة المعلم</span></button></li>
+  </ol>
+
+  <section class="pane work-pane" data-testid="work-pane" id="work-pane" data-active-step="setup" aria-labelledby="setup-heading">
+    <section class="workflow-step setup-step" data-workflow-step="setup" aria-labelledby="setup-heading">
+    <div class="setup-head">
+      <h1 class="step-heading" id="setup-heading" tabindex="-1">حوّل صفحة واحدة إلى درس مرتبط بدليله</h1>
+      <p class="scene-lede">اختر صفحة المصدر للبدء، ثم راجع كل مقترح بنفسك — لا يُعتمد شيء إلا بقرارك.</p>
+    </div>
 
     <form data-testid="setup-form" id="setup-form" novalidate>
-      <div class="field field-file">
-        <div class="file-heading">
+      <div data-studio="setup-intake">
+      <div class="create-composition">
+        <div class="field field-file">
           <label for="page-file">ملف صفحة المصدر</label>
-          <p class="file-permission-line">اختر ملفًا يحقّ لك استخدامه</p>
+          <div class="file-pick">
+            <span class="file-pick-action" aria-hidden="true">اختيار ملف</span>
+            <span class="selected-upload-name" data-testid="selected-upload-name">PDF أو صورة PNG/JPG</span>
+            <input id="page-file" name="page-file" type="file" accept="image/png,image/jpeg,application/pdf" aria-describedby="page-file-hint">
+          </div>
+          <small class="hint" id="page-file-hint">اختر الملف، ثم حدّد صفحة واحدة منه بالأسفل؛ لن يُحلَّل الملف أو الكتاب كاملًا.</small>
         </div>
-        <div class="file-pick">
-          <span class="file-pick-action" aria-hidden="true">اختيار ملف</span>
-          <span class="selected-upload-name" data-testid="selected-upload-name">PDF أو صورة PNG/JPG</span>
-          <input id="page-file" name="page-file" type="file" accept="image/png,image/jpeg,application/pdf" aria-describedby="page-file-hint">
+        <div class="studio-art" aria-hidden="true">
+        <svg viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="iynaa-art-glow" cx="50%" cy="46%" r="55%">
+      <stop offset="0%" stop-color="#B794F6" stop-opacity="0.42"/>
+      <stop offset="55%" stop-color="#6B3FA0" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#6B3FA0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="iynaa-art-cover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D3A6B"/>
+      <stop offset="100%" stop-color="#0A1730"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-page-left" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFDF6"/>
+      <stop offset="100%" stop-color="#F1E9D8"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-page-right" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#EFE7FA"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-page-flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F6C87E"/>
+      <stop offset="100%" stop-color="#7BD3B2"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-leaf" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3E9C7A"/>
+      <stop offset="100%" stop-color="#7BD3B2"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-stem" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9B7EDE"/>
+      <stop offset="100%" stop-color="#F2B25C"/>
+    </linearGradient>
+    <linearGradient id="iynaa-art-copper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F6C87E"/>
+      <stop offset="100%" stop-color="#D98F4E"/>
+    </linearGradient>
+    <radialGradient id="iynaa-art-orb" cx="38%" cy="32%" r="74%">
+      <stop offset="0%" stop-color="#FFE9B8"/>
+      <stop offset="100%" stop-color="#F2B25C"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="320" cy="168" rx="286" ry="152" fill="url(#iynaa-art-glow)"/>
+  <g fill="none" stroke="#7FA8E8">
+    <path opacity="0.45" stroke-width="1.5" d="M96 330 L96 176 C96 92 190 34 320 34 C450 34 544 92 544 176 L544 330"/>
+    <path opacity="0.2" stroke-width="1.2" d="M120 330 L120 182 C120 108 204 58 320 58 C436 58 520 108 520 182 L520 330"/>
+  </g>
+  <g>
+    <g transform="translate(72 84) rotate(-6)">
+      <rect x="8" y="10" width="196" height="238" rx="12" fill="#060D1F" opacity="0.45"/>
+      <rect x="0" y="0" width="196" height="238" rx="12" fill="url(#iynaa-art-page-left)" stroke="#D9C9A3" stroke-width="1.4"/>
+      <rect x="24" y="24" width="92" height="10" rx="5" fill="#6B3FA0" opacity="0.85"/>
+      <rect x="24" y="48" width="148" height="6" rx="3" fill="#5B6B8A" opacity="0.55"/>
+      <rect x="24" y="62" width="148" height="6" rx="3" fill="#5B6B8A" opacity="0.45"/>
+      <rect x="24" y="76" width="118" height="6" rx="3" fill="#5B6B8A" opacity="0.5"/>
+      <rect x="18" y="94" width="160" height="40" rx="8" fill="#F6C87E" opacity="0.5"/>
+      <rect x="24" y="104" width="148" height="6" rx="3" fill="#7A5A2E" opacity="0.75"/>
+      <rect x="24" y="118" width="128" height="6" rx="3" fill="#7A5A2E" opacity="0.65"/>
+      <circle cx="188" cy="114" r="7" fill="url(#iynaa-art-orb)" stroke="#D98F4E" stroke-width="1.4"/>
+      <rect x="24" y="148" width="148" height="6" rx="3" fill="#5B6B8A" opacity="0.45"/>
+      <rect x="24" y="162" width="148" height="6" rx="3" fill="#5B6B8A" opacity="0.5"/>
+      <rect x="18" y="178" width="160" height="34" rx="8" fill="#7BD3B2" opacity="0.35"/>
+      <rect x="24" y="187" width="136" height="6" rx="3" fill="#2E6B52" opacity="0.7"/>
+      <rect x="24" y="200" width="108" height="6" rx="3" fill="#2E6B52" opacity="0.6"/>
+      <circle cx="188" cy="195" r="7" fill="url(#iynaa-art-leaf)" stroke="#3E9C7A" stroke-width="1.2"/>
+    </g>
+    <g fill="none" stroke="url(#iynaa-art-stem)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 9">
+      <path d="M282 188 C330 172 356 158 404 148"/>
+      <path d="M284 268 C332 254 360 238 406 224"/>
+      <path d="M292 228 C336 222 364 208 404 196"/>
+    </g>
+    <circle cx="344" cy="166" r="5" fill="url(#iynaa-art-orb)"/>
+    <circle cx="348" cy="246" r="5" fill="url(#iynaa-art-leaf)"/>
+    <circle cx="350" cy="216" r="4" fill="#B794F6"/>
+    <g transform="translate(408 78) rotate(3)">
+      <rect x="16" y="18" width="184" height="232" rx="14" fill="url(#iynaa-art-cover)" opacity="0.9"/>
+      <rect x="8" y="8" width="184" height="232" rx="14" fill="#D9E6FA"/>
+      <rect x="0" y="0" width="184" height="232" rx="14" fill="url(#iynaa-art-page-right)" stroke="#C9B8EC" stroke-width="1.4"/>
+      <rect x="22" y="22" width="78" height="11" rx="5.5" fill="#6B3FA0"/>
+      <rect x="22" y="44" width="140" height="6" rx="3" fill="#9B7EDE" opacity="0.6"/>
+      <g>
+        <circle cx="34" cy="76" r="9" fill="url(#iynaa-art-copper)"/>
+        <rect x="54" y="68" width="108" height="7" rx="3.5" fill="#22314F" opacity="0.85"/>
+        <rect x="54" y="82" width="88" height="6" rx="3" fill="#5B6B8A" opacity="0.65"/>
+        <circle cx="34" cy="116" r="9" fill="url(#iynaa-art-leaf)"/>
+        <rect x="54" y="108" width="108" height="7" rx="3.5" fill="#22314F" opacity="0.85"/>
+        <rect x="54" y="122" width="76" height="6" rx="3" fill="#5B6B8A" opacity="0.65"/>
+        <circle cx="34" cy="156" r="9" fill="#B794F6"/>
+        <rect x="54" y="148" width="96" height="7" rx="3.5" fill="#22314F" opacity="0.85"/>
+        <rect x="54" y="162" width="84" height="6" rx="3" fill="#5B6B8A" opacity="0.65"/>
+      </g>
+      <rect x="22" y="188" width="140" height="22" rx="11" fill="url(#iynaa-art-page-flow)" opacity="0.85"/>
+    </g>
+    <g transform="translate(572 274)">
+      <circle r="30" fill="url(#iynaa-art-cover)" stroke="url(#iynaa-art-copper)" stroke-width="2.4"/>
+      <circle r="23" fill="none" stroke="#F6C87E" stroke-width="1.2" opacity="0.7"/>
+      <path d="M-11 0 L-3 9 L13 -10" fill="none" stroke="#FFE9B8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <path transform="translate(86 52)" fill="#F2B25C" opacity="0.9" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
+    <path transform="translate(336 66) scale(0.75)" fill="#B794F6" opacity="0.85" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
+    <path transform="translate(600 96) scale(0.85)" fill="#F2B25C" opacity="0.8" d="M0 -11 C1.6 -3.2 3.2 -1.6 11 0 C3.2 1.6 1.6 3.2 0 11 C-1.6 3.2 -3.2 1.6 -11 0 C-3.2 -1.6 -1.6 -3.2 0 -11 Z"/>
+    <circle cx="150" cy="80" r="3" fill="#7BD3B2" opacity="0.8"/>
+    <circle cx="470" cy="44" r="2.6" fill="#F6C87E" opacity="0.8"/>
+    <circle cx="556" cy="180" r="2.6" fill="#7BD3B2" opacity="0.7"/>
+    <circle cx="60" cy="220" r="2.4" fill="#B794F6" opacity="0.7"/>
+  </g>
+</svg>
         </div>
-        <small class="hint" id="page-file-hint">اختر الملف، ثم حدّد صفحة واحدة منه بالأسفل؛ لن يُحلَّل الملف أو الكتاب كاملًا.</small>
       </div>
 
       <p class="rights-note" data-testid="rights-note">استخدم صفحة يحقّ لك استخدامها في هذا النموذج التجريبي. لا يتحقّق هذا النموذج من الحقوق ولا يمنح تصريحًا.</p>
+      <button class="secondary-action" type="button" data-studio="setup-continue" hidden>متابعة بالملف المختار</button>
+      <button class="secondary-action" type="button" data-studio="setup-settings">إعداد الصف والهدف أولًا</button>
+      </div>
 
+      <p class="setup-error" data-testid="setup-error" role="alert" hidden></p>
+      <p class="setup-action-status" data-testid="setup-action-status" role="status" aria-live="polite">جارٍ تجهيز جلسة المتصفح ووحدة المراجعة…</p>
+      <button class="secondary-action setup-back" type="button" data-studio="setup-back">عودة إلى اختيار الملف</button>
+
+      <div data-studio="setup-context">
+      <p class="setup-context-title">سياق الدرس لهذه الصفحة</p>
       <div class="field-grid">
         <div class="field">
           <label for="grade">الصف الدراسي</label>
@@ -250,25 +211,29 @@
         <small class="hint" id="objective-hint">مثال: أن يميّز الطالب بين السبب والنتيجة في النص</small>
       </div>
 
-      <p class="setup-error" data-testid="setup-error" role="alert" hidden></p>
       <p class="replacement-warning" data-testid="replacement-warning" hidden>الضغط على «تهيئة الصفحة» مجددًا سيستبدل مساحة العمل الحالية في هذه الجلسة — مقاطعها وأسئلتها وقراراتها ومعاينتها — ويبدأ فارغًا، حتى لو اخترت الملف والصفحة نفسيهما.</p>
       <p class="replacement-warning" data-testid="settings-impact-warning">حفظ صف أو هدف جديد يؤثّر في كل الأسئلة المعتمدة المولّدة: ستحتاج إلى مراجعة وتحديث قبل اعتمادها من جديد، دون حذف أي محتوى أو عمل محفوظ.</p>
       <div class="setup-actions">
         <button class="secondary-action" type="button" data-testid="settings-apply" disabled>حفظ الصف والهدف</button>
         <button class="primary-action" type="submit" data-testid="prepare-page" disabled>تهيئة الصفحة</button>
       </div>
-      <p class="setup-action-status" data-testid="setup-action-status" role="status" aria-live="polite">جارٍ تجهيز جلسة المتصفح ووحدة المراجعة…</p>
+      </div>
+
       <div class="prepared-page" data-testid="prepared-page" hidden>
+        <p class="prepared-page-kicker">الصفحة جاهزة للتحقق</p>
         <p class="selected-file-page-note" data-testid="selected-file-page-note"></p>
+        <p class="prepared-page-lede">راجع الصفحة كاملة في لوحة المصدر أولًا، ثم ابدأ تحليلها عندما تطابق ما قصدته.</p>
         <button class="primary-action" type="button" data-testid="confirm-page" hidden disabled>تحليل هذه الصفحة</button>
+        <button class="secondary-action" type="button" data-studio="setup-edit">تعديل بيانات الصفحة</button>
       </div>
     </form>
 
     <p class="future-stages-note" data-testid="future-stages-note">بعد تهيئة الصفحة ورؤية صورتها في المصدر، يبدأ التحليل فقط عند الضغط على «تحليل هذه الصفحة».</p>
     </section>
 
-    <section class="review-stage workflow-step" data-testid="stage-source-review" data-workflow-step="source" aria-labelledby="source-review-heading" hidden>
-      <h2 class="step-heading" id="source-review-heading" tabindex="-1">٢ مراجعة المصدر</h2>
+    <section class="review-stage workflow-step source-step" data-testid="stage-source-review" data-workflow-step="source" aria-labelledby="source-review-heading" hidden>
+      <h2 class="step-heading" id="source-review-heading" tabindex="-1">مراجعة المصدر</h2>
+      <p class="scene-lede">قارن النص المراجَع هنا بصورة الصفحة الأصلية كاملة في لوحة المصدر. النص أدناه قابل للتصحيح والتضمين أو الاستبعاد؛ الصورة هي المرجع.</p>
       <p class="review-empty" data-testid="source-review-empty">تبدأ مراجعة المصدر عند وصول مقاطع من التحليل.</p>
       <p class="source-model-line">النموذج: <bdi class="technical-value" data-testid="source-model-name">اسم النموذج غير متاح بعد</bdi></p>
       <details class="source-notes-details" data-testid="source-notes-details">
@@ -276,6 +241,7 @@
         <div class="source-review-notes" data-testid="source-review-notes">ملاحظات مراجعة المصدر غير متاحة بعد.</div>
       </details>
       <p class="source-page-continuation" data-testid="source-page-continuation">استمرارية الصفحة كما أوردها النموذج غير متاحة بعد.</p>
+      <p class="reviewed-text-label">النص المراجَع — قرارك على كل مقطع</p>
       <div class="region-list" data-testid="region-list"></div>
       <p class="source-counts" data-testid="source-counts"></p>
       <p class="generate-gate-status" data-testid="generate-gate-status"></p>
@@ -284,20 +250,32 @@
       <p class="replacement-warning" data-testid="generation-retry-warning" hidden>قد يستمرّ الطلب السابق لدى المزوّد وقد يُحتسب استخدامه؛ إعادة المحاولة تبدأ طلبًا جديدًا.</p>
     </section>
 
-    <section class="review-stage workflow-step" data-testid="stage-question-review" data-workflow-step="questions" aria-labelledby="question-review-heading" hidden>
-      <h2 class="step-heading" id="question-review-heading" tabindex="-1">٣ مراجعة الأسئلة</h2>
+    <section class="review-stage workflow-step questions-step" data-testid="stage-question-review" data-workflow-step="questions" aria-labelledby="question-review-heading" hidden>
+      <h2 class="step-heading" id="question-review-heading" tabindex="-1">مراجعة الأسئلة</h2>
+      <p class="scene-lede">قرار واحد في كل مرة: اقرأ السؤال ودليله، ثم حرّر أو اعتمد أو ارفض. لا يدخل المعاينة إلا ما تعتمده صراحة.</p>
       <p class="review-empty" data-testid="question-review-empty">تظهر الأسئلة هنا بعد توليد ناجح.</p>
-      <div class="question-request-summaries" data-testid="question-request-summaries"></div>
-      <div class="slot-outcomes" data-testid="slot-outcomes"></div>
+      <div class="question-navigator">
+        <button class="secondary-action" type="button" data-studio="question-prev">السؤال السابق</button>
+        <div class="question-nav-track" data-studio="question-nav"></div>
+        <p class="question-progress" data-studio="question-progress"></p>
+        <button class="secondary-action" type="button" data-studio="question-next">السؤال التالي</button>
+      </div>
       <div class="question-list" data-testid="question-list"></div>
+      <div class="question-request-summaries" data-testid="question-request-summaries"></div>
+      <details class="slot-outcomes-details">
+        <summary>نتائج التوليد لكل مستوى بالتفصيل</summary>
+        <div class="slot-outcomes" data-testid="slot-outcomes"></div>
+      </details>
     </section>
 
-    <section class="review-stage workflow-step" data-testid="stage-teacher-preview" data-workflow-step="preview" aria-labelledby="teacher-preview-heading" hidden>
-      <h2 class="step-heading" id="teacher-preview-heading" tabindex="-1">٤ معاينة المعلم</h2>
-      <p class="teacher-preview-warning" data-testid="teacher-preview-warning">معاينة للمعلم فقط — ليست نشرًا للطلاب ولا اعتمادًا تربويًا نهائيًا.</p>
-      <p class="preview-empty" data-testid="preview-empty">لا أسئلة معتمدة حاليًا؛ اعتمد سؤالًا من مراجعة الأسئلة لتظهر هنا.</p>
-      <button class="secondary-action" type="button" data-testid="preview-return" disabled>عودة إلى مراجعة الأسئلة</button>
-      <div class="preview-list" data-testid="preview-list"></div>
+    <section class="review-stage workflow-step preview-step" data-testid="stage-teacher-preview" data-workflow-step="preview" aria-labelledby="teacher-preview-heading" hidden>
+      <div class="lesson-document">
+        <h2 class="step-heading" id="teacher-preview-heading" tabindex="-1">معاينة المعلم</h2>
+        <p class="teacher-preview-warning" data-testid="teacher-preview-warning">معاينة للمعلم فقط — ليست نشرًا للطلاب ولا اعتمادًا تربويًا نهائيًا.</p>
+        <p class="preview-empty" data-testid="preview-empty">لا أسئلة معتمدة حاليًا؛ اعتمد سؤالًا من مراجعة الأسئلة لتظهر هنا.</p>
+        <button class="secondary-action" type="button" data-testid="preview-return" disabled>عودة إلى مراجعة الأسئلة</button>
+        <div class="preview-list" data-testid="preview-list"></div>
+      </div>
     </section>
   </section>
 
@@ -336,7 +314,9 @@
     </div>
   </section>
 </main>
+</div>
 
 <script type="module" src="/assets/workspace.js"></script>
 </body>
 </html>
+

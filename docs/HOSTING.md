@@ -1,32 +1,75 @@
-# Optional hosted teacher workspace
+# Optional hosted teacher workspace — Iynaa Lesson Studio
 
 The hosted launcher is optional.
 Local use through `launch.py` remains the default.
-Hosted mode serves the same teacher-only guided flow for one
-exact public hostname:
-prepare one full Arabic page reference with no model request,
-inspect the exact page, explicitly confirm analysis, review the
-source in its active step, save or discard edits explicitly,
-review Bloom drafts with save or discard before same-question
-approval, and explicitly open the approved-only preview.
+Hosted mode serves the same teacher-only Studio flow for
+one exact public hostname: create and configure one full
+Arabic page (file selection first by default, with an
+explicit optional no-file grade and goal path), prepare a
+page reference with no model request, inspect the exact
+page, explicitly confirm analysis, compare original and
+reviewed source, generate from the reviewed included
+subset, review Bloom drafts one at a time in the focused
+question navigator with save or discard before approval,
+and explicitly open the approved-only teacher lesson
+preview.
+Same keyed drafts are retained through navigation, and
+approval or preview is never automatic.
+Evidence is the full-page original, not tight highlighted
+localization.
+The generation summary remains readable, with full slot
+outcomes and raw technical metadata on demand.
 
-Status (2026-11-03): the guided flow is publicly deployed at
-[hackathon-iynaa.site](https://hackathon-iynaa.site) and has been
-read back there.
-The new art-directed visual revision of that flow — original
-inline vector artwork coded by Meta (not image-model output),
-purposeful CSS with reduced-motion support, a true Arabic file
-selector, and warning / source-flag summaries with exact full
-details behind disclosures — is verified locally only and is
-pending public cutover.
-A read-back on 2026-11-02 covered the build then live; each
-deployed version requires its own version-specific read-back
-and verification.
-This document accompanies the source; it is not an always-current
-deployment-status statement.
-A ready domain or certificate does not by itself prove a live
-Meta flow.
-Command examples below use the placeholder `demo.example.com`.
+Studio is a new composition of that flow, not a mere
+restyling and not a clone of a full existing Iynaa
+platform.
+The public API, domain, transport, and approval rules are
+unchanged.
+
+Status: this source describes the local Studio candidate.
+A prior guided version was served at
+[hackathon-iynaa.site](https://hackathon-iynaa.site).
+These documents do not assert a Studio public cutover and
+do not by themselves establish which build is live.
+Any later cutover needs an exact-version read-back.
+A read-back on 2026-11-02 covered the build then live;
+each deployed version requires its own version-specific
+read-back and verification.
+This document accompanies the source; it is not an
+always-current deployment-status statement.
+A ready domain or certificate does not by itself prove a
+live Meta flow.
+Command examples below use the placeholder
+`demo.example.com`.
+
+## Bundled assets and content security
+
+This version adds exactly two bundled same-origin assets
+to the fixed client surface: `/assets/studio.js` and
+`/assets/cairo.ttf`, alongside the setup shell and its
+existing stylesheet and scripts.
+No new package, runtime service, or CDN is needed.
+This replaces any earlier statement that no new runtime
+asset was added.
+
+Cairo is a publicly sourced third-party font licensed
+under the SIL Open Font License 1.1 (SIL OFL 1.1).
+It is not AI-generated and not Meta-generated.
+See `THIRD_PARTY_NOTICES.md` and
+`src/teacher_demo/static/fonts/OFL.txt`.
+
+The content-security policy allows `font-src 'self'` only
+with `default-src 'none'`, no external scripts, styles,
+or fonts, no eval or inline relaxation, and no generic
+static-path exposure.
+Client files are served only through the fixed route
+mapping.
+
+Meta authored the original product, application code,
+tests, and original inline vector artwork in code (not
+image-model output).
+Independent review and execution were separate and are
+not all attributed to Meta.
 
 ## Network shape
 

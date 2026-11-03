@@ -1,3 +1,9 @@
+import {
+  isStudioElementVisible,
+  renderStudioQuestions,
+  resetStudioQuestionSelection,
+  selectStudioQuestion,
+} from "./studio.js";
 // Review coordinator: acknowledged snapshots, keyed local drafts
 // and the authoritative teacher preview. All transport, session
 // and queue ownership stay in workspace.js.
@@ -405,7 +411,11 @@ function renderQuestionRequestSummaries(snapshot) {
       request, draftCount, abstainCount);
     const identifier = document.createElement("bdi");
     identifier.textContent = requestId;
-    node.append(text, " معرّف الطلب: ", identifier);
+    const identifierDetails = document.createElement("details");
+    const identifierSummary = document.createElement("summary");
+    identifierSummary.textContent = "معرّف الطلب";
+    identifierDetails.append(identifierSummary, identifier);
+    node.append(text, identifierDetails);
     nodes.push(node);
   }
   questionRequestSummaries.replaceChildren(...nodes);
@@ -871,7 +881,8 @@ function detailMessage(detail) {
 }
 
 function focusIfUsable(element) {
-  if (element && element.isConnected && !element.disabled) {
+  if (element && element.isConnected && !element.disabled
+      && isStudioElementVisible(element)) {
     element.focus();
   }
 }
@@ -1205,6 +1216,7 @@ function renderView() {
   // zero-draft request; the generic empty line must not stand
   // as if a successful generation were still the only account.
   questionReviewEmpty.hidden = questions.length > 0 || summaryCount > 0;
+  renderStudioQuestions(questions, questionRecords, handleShowQuestion);
 
   if (!reviewCurrency.current || previewSuppressed || !snapshot) {
     orderChildren(previewList, []);
@@ -1330,6 +1342,7 @@ function clearReviewForSource(sourceId) {
   activeSourceId = sourceId;
   currentSnapshot = null;
   selectedRegionId = null;
+  resetStudioQuestionSelection();
   previewSuppressed = false;
   reviewCurrency.current = true;
   reviewCurrency.acknowledgedSettings = null;
@@ -1578,6 +1591,7 @@ function handleShowQuestion(questionId) {
   if (!record) {
     return;
   }
+  selectStudioQuestion(questionId);
   workspace.showWork();
   workspace.selectWorkflowStep?.("questions");
   record.heading.focus();
@@ -1659,7 +1673,7 @@ function handleQuestionEditCancel(questionId) {
   openEditors.delete(questionId);
   record.closeEditor();
   renderView();
-  record.heading.focus();
+  focusIfUsable(record.heading);
 }
 
 function assertSendable(expectedSourceId) {
@@ -1864,7 +1878,7 @@ function handleQuestionEditCommit(questionId) {
     openEditors.delete(questionId);
     record.closeEditor();
     renderView();
-    record.heading.focus();
+    focusIfUsable(record.heading);
     return;
   }
   const draftCopy = { ...draft };

@@ -47,3 +47,6 @@
 *.PDF binary
 *.MP4 binary
 *.MOV binary
+
+# Preserve exact upstream OFL license bytes; exempt from CRLF normalization.
+src/teacher_demo/static/fonts/OFL.txt -text

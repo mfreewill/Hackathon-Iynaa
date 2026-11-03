@@ -285,6 +285,16 @@ class HostedUsageBudgetBrowserTests(unittest.TestCase):
             expect(
                 page.get_by_test_id("stage-question-review")
             ).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
+            # Open the slot-outcomes disclosure so pending rows show text.
+            slot_details = page.locator(
+                "[data-testid='slot-outcome']").first.locator(
+                "xpath=ancestor::details[1]")
+            if (slot_details.count() > 0
+                    and slot_details.first.get_attribute(
+                        "open") is None):
+                slot_details.first.locator("summary").first.click()
+                expect(slot_details.first).to_have_attribute(
+                    "open", "", timeout=ASSERT_TIMEOUT_MS)
             pending_rows = page.locator(
                 "[data-testid='slot-outcome']"
                 "[data-outcome='pending']")

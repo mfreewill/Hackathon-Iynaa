@@ -256,6 +256,17 @@ class QuestionOutcomeSummaryBrowserTests(unittest.TestCase):
                     self.assertTrue(
                         "امتناع" in text or "امتنع" in text, text)
 
+                # Explicit navigation: open enclosing outcomes details.
+                slot_details = stage.get_by_test_id(
+                    "slot-outcome").first.locator(
+                    "xpath=ancestor::details[contains(@class, "
+                    "'slot-outcomes-details')][1]")
+                if (slot_details.count() == 1
+                        and slot_details.get_attribute("open") is None):
+                    slot_details.locator(
+                        "xpath=./summary[1]").click()
+                    expect(slot_details).to_have_attribute(
+                        "open", "", timeout=timeout)
                 rows = stage.get_by_test_id("slot-outcome")
                 expect(rows).to_have_count(6, timeout=timeout)
                 for slot in slots:
@@ -286,6 +297,8 @@ class QuestionOutcomeSummaryBrowserTests(unittest.TestCase):
                         "[data-testid='question-card']"
                         "[data-question-id=\"{0}\"]".format(
                             question["question_id"]))
+                    # Explicit navigation: show this question card.
+                    helper.ensure_question_visible(card)
                     expect(card).to_be_visible(timeout=timeout)
                     expect(card).to_contain_text(
                         question["current_question"].strip(),

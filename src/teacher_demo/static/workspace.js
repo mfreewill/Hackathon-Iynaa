@@ -1,3 +1,8 @@
+import {
+  initStudioView,
+  reflectStudioStage,
+  syncStudioSetupView,
+} from "./studio.js";
 // Setup/source increment client. Same-origin fetch only; the
 // server snapshot is the authority and no proposal is ever
 // generated or inferred here.
@@ -541,6 +546,7 @@ function renderWorkflowStep() {
       }
     }
   }
+  reflectStudioStage(activeWorkflowStep);
 }
 
 function selectWorkflowStep(step) {
@@ -549,6 +555,7 @@ function selectWorkflowStep(step) {
   }
   activeWorkflowStep = step;
   renderWorkflowStep();
+  showWork();
 }
 
 function revealSourceReview() {
@@ -603,6 +610,7 @@ function renderPendingConfirmation() {
     preparedPagePanel.hidden = !candidate;
   }
   if (!confirmButton) {
+    syncStudioSetupView();
     return;
   }
   confirmButton.hidden = !candidate;
@@ -612,6 +620,7 @@ function renderPendingConfirmation() {
     || busy || outcomeUncertain || isSessionExpired()
     || !reviewReady
     || !providerSendPermitted("source", candidate.sourceId);
+  syncStudioSetupView();
 }
 
 function invalidatePendingConfirmation(message) {
@@ -1249,12 +1258,17 @@ function renderOperationControls() {
   const display = activeProviderOperation || lastSettledOperation;
   if (!display || outcomeUncertain) {
     operationGroup.hidden = true;
+    delete operationGroup.dataset.displayState;
     return;
   }
   operationGroup.hidden = false;
   operationStatus.textContent = display.statusText || "";
   const expired = isSessionExpired();
   const active = display === activeProviderOperation && !display.settled;
+  operationGroup.dataset.displayState = active ? "active"
+    : display.settled && display.result
+      && display.result.type === "success" && !expired
+      ? "settled-success" : "attention";
   const commonDisabled = !active || !display.sent || expired;
   if (operationCancelButton) {
     operationCancelButton.hidden = !active;
@@ -1489,7 +1503,7 @@ function classifyOriginalResponse(operation, status, body, readable) {
 function revealProviderOperation(operation) {
   if (!operationGroup || !operation
       || operation !== activeProviderOperation
-      || operation.progressRevealed || workPane.hidden) {
+      || operation.progressRevealed || operationGroup.hidden) {
     return;
   }
   operation.progressRevealed = true;
@@ -2454,6 +2468,18 @@ window.addEventListener("resize", scheduleFocusedControlVisibility);
 
 showActivePane();
 updateReplacementWarning();
+initStudioView(() => ({
+  stage: activeWorkflowStep,
+  hasFile: Boolean(fileInput.files && fileInput.files.length),
+  candidate: pendingConfirmation,
+  candidateState: pendingConfirmation?.state ?? null,
+  candidateCurrent: pendingConfirmationCurrent(),
+  hasCommittedSource,
+  initialAnalysisAttempted,
+  outcomeUncertain,
+  sessionExpired: isSessionExpired(),
+  setupErrorVisible: Boolean(setupError && !setupError.hidden),
+}));
 // The one internal interface shared with the review modules.
 export const workspace = {
   apiFetch,

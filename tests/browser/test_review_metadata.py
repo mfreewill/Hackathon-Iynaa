@@ -52,7 +52,7 @@ ASSERT_TIMEOUT_MS = 10_000
 MARKER_TIMEOUT_MS = 2_000
 
 UNAVAILABLE_MODEL = "غير متاح"
-CHANGED_GRADE = "  الصَّفُّ ٦  "
+CHANGED_GRADE = "الصف السادس"
 CHANGED_OBJECTIVE = "  هَدَفٌ مُعَدَّلٌ: قِرَاءَةُ النَّصِّ ٤٥٦  "
 CHANGED_REGION_LABEL = "تصنيف المعلم بعد التعديل"
 CHANGED_SETUP_OBJECTIVE = "  هَدَفٌ جَدِيدٌ: قِرَاءَةُ النَّصِّ ٧٨٩  "
@@ -300,7 +300,7 @@ class ReviewMetadataBrowserTests(unittest.TestCase):
     def start_source_analysis(self, context, page):
         """Drive the existing setup form to a real source analysis."""
         page.goto("/")
-        page.get_by_label("الصف الدراسي", exact=True).fill(self.fx["GRADE"])
+        page.get_by_label("الصف الدراسي", exact=True).select_option(value=self.fx["GRADE"])
         page.get_by_label("الهدف التعليمي", exact=True).fill(self.fx["OBJECTIVE"])
         page.locator("input[type='file']").set_input_files({
             "name": "synthetic-page.png", "mimeType": "image/png",
@@ -501,7 +501,7 @@ class ReviewMetadataBrowserTests(unittest.TestCase):
                 if "required_order_missing" not in item.get("blocks", []))
             card = self.question_card(page, target)
             self.open_question_editor(card)
-            self.tid(card, "question-edit-grade").fill(CHANGED_GRADE)
+            self.tid(card, "question-edit-grade").select_option(value=CHANGED_GRADE)
             self.tid(card, "question-edit-objective").fill(
                 CHANGED_OBJECTIVE)
             self.click_expect(
@@ -529,8 +529,8 @@ class ReviewMetadataBrowserTests(unittest.TestCase):
                 card, "question-objective", edited["current_objective"])
 
             self.open_question_editor(card)
-            self.tid(card, "question-edit-grade").fill(
-                edited["generation_grade"])
+            self.tid(card, "question-edit-grade").select_option(
+                value=edited["generation_grade"])
             self.tid(card, "question-edit-objective").fill(
                 edited["generation_objective"])
             self.click_expect(

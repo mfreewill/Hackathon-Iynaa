@@ -63,6 +63,10 @@ const OUTDATED_PREVIEW_TEXT =
   "لم تعد هناك أسئلة معتمدة حاليًا؛ الاعتمادات السابقة تحتاج إلى تحديث.";
 const REJECTED_PREVIEW_TEXT =
   "لا أسئلة معتمدة حاليًا؛ توجد أسئلة مرفوضة بقرار المعلم.";
+const NO_DRAFT_QUESTION_LEDE =
+  "لا توجد مسودات أسئلة حاليًا لمراجعتها أو تحريرها أو اعتمادها.";
+const NO_DRAFT_RECOVERY_TEXT =
+  "للمتابعة، ارجع إلى مراجعة المصدر وتحقّق من المقاطع المشمولة؛ يبدأ توليد الأسئلة من هناك بقرارك.";
 
 const QUESTION_EDIT_FIELDS = [
   ["question", "current_question"],
@@ -151,6 +155,37 @@ const previewRecords = new Map();
 const sourceReviewNotes = byTestId("source-review-notes");
 const sourcePageContinuation = byTestId("source-page-continuation");
 const questionRequestSummaries = byTestId("question-request-summaries");
+// One persistent zero-draft recovery block in the question-review
+// stage, next to the request summaries. It is created once so no
+// historical summary can ever add a duplicate action; renderView
+// only shows or hides it from the latest adopted snapshot.
+const questionReviewStage = byTestId("stage-question-review");
+const questionReviewLede = questionReviewStage
+  ? questionReviewStage.querySelector(".scene-lede") : null;
+const defaultQuestionReviewLedeText = questionReviewLede
+  ? questionReviewLede.textContent : "";
+const noDraftRecovery = document.createElement("div");
+noDraftRecovery.dataset.testid = "question-no-draft-recovery";
+noDraftRecovery.hidden = true;
+const noDraftRecoveryText = document.createElement("p");
+noDraftRecoveryText.textContent = NO_DRAFT_RECOVERY_TEXT;
+const noDraftReturnButton = document.createElement("button");
+noDraftReturnButton.type = "button";
+noDraftReturnButton.className = "secondary-action";
+noDraftReturnButton.dataset.testid =
+  "question-no-draft-return-source";
+noDraftReturnButton.textContent = "العودة إلى مراجعة المصدر";
+noDraftReturnButton.disabled = true;
+noDraftRecovery.append(noDraftRecoveryText, noDraftReturnButton);
+if (questionRequestSummaries
+    && questionRequestSummaries.parentElement) {
+  questionRequestSummaries.parentElement.insertBefore(
+    noDraftRecovery, questionRequestSummaries.nextSibling);
+} else if (questionReviewStage) {
+  questionReviewStage.append(noDraftRecovery);
+}
+noDraftReturnButton.addEventListener(
+  "click", handleNoDraftReturnToSourceReview);
 
 // Availability follows the current adopted snapshot only. The
 // workspace setter paints step buttons and never calls back into
@@ -423,6 +458,59 @@ function renderQuestionRequestSummaries(snapshot) {
     questionRequestSummaries.hidden = false;
   }
   return nodes.length;
+}
+
+// Zero-current-draft recovery, derived only from the latest
+// adopted snapshot: a closed questions request of any outcome
+// (error, timeout, refusal, rate-limited, cancelled, or ok
+// with no drafts) and no current question cards. No request
+// ID is ever sorted or guessed. Without a current source, or
+// while uncertain, expired, busy, working or noncurrent, the
+// action stays hidden and disabled, so viewing last-known
+// text gains no mutation permission.
+function noDraftRecoveryAvailable(snapshot, questions) {
+  return Boolean(snapshot && activeSourceId
+    && snapshot.source_id === activeSourceId
+    && reviewCurrency.current
+    && !isBusy
+    && !workspace.isOutcomeUncertain()
+    && !workspace.isSessionExpired()
+    && !workspace.hasActiveProviderOperation()
+    && !hasWorkingRequest(snapshot)
+    && questions.length === 0
+    && requestEntries(snapshot).some((entry) => entry
+      && typeof entry === "object" && entry.kind === "questions"
+      && (entry.state === "terminal"
+        || entry.state === "superseded")));
+}
+
+function renderNoDraftRecovery(snapshot, questions) {
+  const show = noDraftRecoveryAvailable(snapshot, questions);
+  noDraftRecovery.hidden = !show;
+  noDraftReturnButton.disabled = !show;
+  if (questionReviewLede) {
+    questionReviewLede.textContent = show
+      ? NO_DRAFT_QUESTION_LEDE : defaultQuestionReviewLedeText;
+  }
+  return show;
+}
+
+// Navigation only: the source scene keeps owning Generate and
+// its new-request warning. No send, adoption, draft change or
+// inferred approval happens here, and the guard is re-derived
+// at click time from the then-current snapshot.
+function handleNoDraftReturnToSourceReview() {
+  const questions = Array.isArray(currentSnapshot?.questions)
+    ? currentSnapshot.questions : [];
+  if (!noDraftRecoveryAvailable(currentSnapshot, questions)) {
+    return;
+  }
+  if (typeof workspace.revealSourceReview === "function") {
+    workspace.revealSourceReview();
+  } else {
+    workspace.selectWorkflowStep?.("source");
+    workspace.showWork();
+  }
 }
 
 // The global generation result line for one exact operation,
@@ -1215,7 +1303,12 @@ function renderView() {
   // A readable exact-request summary is the outcome state for a
   // zero-draft request; the generic empty line must not stand
   // as if a successful generation were still the only account.
-  questionReviewEmpty.hidden = questions.length > 0 || summaryCount > 0;
+  // The summaries and slot outcomes above stay as the evidence;
+  // the recovery block only adds the return instruction.
+  const showNoDraftRecovery =
+    renderNoDraftRecovery(snapshot, questions);
+  questionReviewEmpty.hidden = questions.length > 0 || summaryCount > 0
+    || showNoDraftRecovery;
   renderStudioQuestions(questions, questionRecords, handleShowQuestion);
 
   if (!reviewCurrency.current || previewSuppressed || !snapshot) {

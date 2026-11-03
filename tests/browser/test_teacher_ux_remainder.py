@@ -274,7 +274,7 @@ class TeacherUXRemainderBrowserTests(unittest.TestCase):
                 # believes itself current until the refusal lands.
                 if action in ("settings", "start"):
                     page.get_by_label(
-                        "الصف الدراسي", exact=True).fill(
+                        "الصف الدراسي", exact=True).select_option(value=
                             fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
                     page.get_by_label(
                         "الهدف التعليمي", exact=True).fill(
@@ -511,7 +511,7 @@ class TeacherUXRemainderBrowserTests(unittest.TestCase):
                 page.wait_for_load_state(
                     "networkidle", timeout=NAV_TIMEOUT_MS)
                 page.get_by_label(
-                    "الصف الدراسي", exact=True).fill(
+                    "الصف الدراسي", exact=True).select_option(value=
                         fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
                 page.get_by_label(
                     "الهدف التعليمي", exact=True).fill(
@@ -565,7 +565,7 @@ class TeacherUXRemainderBrowserTests(unittest.TestCase):
                 # PUT, a semantic no-op, and no unnecessary page
                 # snapshot read follows the acknowledgement.
                 page.get_by_label(
-                    "الصف الدراسي", exact=True).fill(
+                    "الصف الدراسي", exact=True).select_option(value=
                         fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
                 page.get_by_label(
                     "الهدف التعليمي", exact=True).fill(
@@ -712,7 +712,7 @@ class TeacherUXRemainderBrowserTests(unittest.TestCase):
                 # questions, no automatic model request, and no
                 # resurrected approval.
                 page.get_by_label(
-                    "الصف الدراسي", exact=True).fill(
+                    "الصف الدراسي", exact=True).select_option(value=
                         fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
                 page.get_by_label(
                     "الهدف التعليمي", exact=True).fill(

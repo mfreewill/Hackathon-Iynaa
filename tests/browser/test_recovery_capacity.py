@@ -51,7 +51,7 @@ class RecoveryCapacityBrowserTests(unittest.TestCase):
             setup_settings = page.locator('[data-studio="setup-settings"]')
             if grade.is_hidden() and setup_settings.count() > 0 and setup_settings.first.is_visible():
                 setup_settings.first.click()
-            grade.fill(_fx(h.fx, "GRADE"))
+            grade.select_option(value=_fx(h.fx, "GRADE"))
             objective.fill(_fx(h.fx, "OBJECTIVE"))
             page_number.fill("1")
             upload.set_input_files({"name": "page1.png", "mimeType": "image/png", "buffer": h.png_bytes})

@@ -242,7 +242,7 @@ class ReviewDraftPreservationBrowserTests(unittest.TestCase):
         page.locator("input[type='file']").set_input_files({
             "name": "synthetic-page.png", "mimeType": "image/png",
             "buffer": self.png_bytes})
-        page.get_by_label("الصف الدراسي", exact=True).fill(self.fx["GRADE"])
+        page.get_by_label("الصف الدراسي", exact=True).select_option(value=self.fx["GRADE"])
         page.get_by_label("الهدف التعليمي", exact=True).fill(self.fx["OBJECTIVE"])
         # The browser page-number field is one-based.
         page.get_by_label("رقم الصفحة", exact=True).fill("1")

@@ -48,8 +48,8 @@ ANALYZE_COGNITIVE = "Synthetic analysis task for the stated grade."
 class ReviewMetadataProvider(controls.ControlsProvider):
     """ControlsProvider outputs plus per-request model attribution."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *, grade=controls.GRADE):
+        super().__init__(grade=grade)
         self._question_model_count = 0
 
     def _source(self, request):

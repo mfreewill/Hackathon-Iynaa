@@ -53,6 +53,9 @@ from .question_protocol_v2 import BLOOM_LEVELS
 SESSION_COOKIE = "teacher_session"
 MAX_SESSIONS = 8
 MAX_INFLIGHT_UPLOADS = 2
+JSON_BODY_TIMEOUT_SECONDS = 30.0
+UPLOAD_BODY_TIMEOUT_SECONDS = 300.0
+MAX_CONCURRENT_BODY_READERS = 16
 MAX_SESSION_JSON_BYTES = 1_024
 MAX_SETTINGS_JSON_BYTES = 16_384
 MAX_COMMAND_JSON_BYTES = 16_384
@@ -89,6 +92,19 @@ class _AdmissionCancelled(Exception):
 
 class _SourceMismatch(Exception):
     """Supplied source is not the exact current source."""
+
+
+def _object_without_duplicates(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate object name")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(_value):
+    raise ValueError("invalid JSON constant")
 
 
 def _provider_accepts_context(callable_):
@@ -224,6 +240,7 @@ def create_app(
     # admission, and global retained-budget publication.
     registry_lock = threading.Lock()
     inflight = {"count": 0, "provider": 0}
+    body_readers = {"count": 0}
     provider_executor = ThreadPoolExecutor(
         max_workers=MAX_PROVIDER_CONCURRENCY,
         thread_name_prefix="teacher-provider")
@@ -467,6 +484,24 @@ def create_app(
     def refuse(status, detail):
         raise HTTPException(status_code=status, detail=detail)
 
+    def _body_close_headers(request):
+        scope = getattr(request, "scope", None)
+        version = (
+            scope.get("http_version", "")
+            if isinstance(scope, dict) else "")
+        if not isinstance(version, str):
+            version = ""
+        if version.startswith("1.") or not version:
+            return {"Connection": "close"}
+        return None
+
+    def _refuse_body(request, status, detail):
+        headers = _body_close_headers(request)
+        if headers is None:
+            raise HTTPException(status_code=status, detail=detail)
+        raise HTTPException(
+            status_code=status, detail=detail, headers=headers)
+
     def check_host(request):
         if request.headers.get("host") not in hosts:
             refuse(400, "invalid host")
@@ -600,25 +635,65 @@ def create_app(
             status_code=status, content=payload,
             headers={"Cache-Control": "no-store"})
 
-    async def read_bounded(request, limit):
-        chunks = []
-        total = 0
-        async for chunk in request.stream():
-            if not chunk:
-                continue
-            total += len(chunk)
-            if total > limit:
-                refuse(413, "request too large")
-            chunks.append(chunk)
-        return b"".join(chunks)
+    async def read_bounded(request, limit, timeout_seconds):
+        with registry_lock:
+            if body_readers["count"] >= MAX_CONCURRENT_BODY_READERS:
+                _refuse_body(request, 429, {
+                    "code": "body_reader_capacity_exceeded",
+                    "admission": "not_started",
+                    "message": "body reader capacity exceeded"})
+            body_readers["count"] += 1
+        try:
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + timeout_seconds
+            chunks = []
+            total = 0
+            timeout = asyncio.timeout_at(deadline)
+            try:
+                async with timeout:
+                    async for chunk in request.stream():
+                        if not chunk:
+                            continue
+                        total += len(chunk)
+                        if total > limit:
+                            _refuse_body(
+                                request, 413, "request too large")
+                        chunks.append(chunk)
+            except TimeoutError:
+                expired_attr = getattr(timeout, "expired", None)
+                if callable(expired_attr):
+                    expired = expired_attr()
+                elif expired_attr is not None:
+                    expired = bool(expired_attr)
+                else:
+                    expired = False
+                if not expired and loop.time() < deadline:
+                    raise
+                _refuse_body(request, 400, {
+                    "code": "request_body_timeout",
+                    "admission": "not_started",
+                    "message": "request body timeout"})
+            if loop.time() >= deadline:
+                _refuse_body(request, 400, {
+                    "code": "request_body_timeout",
+                    "admission": "not_started",
+                    "message": "request body timeout"})
+            return b"".join(chunks)
+        finally:
+            with registry_lock:
+                body_readers["count"] -= 1
 
     async def read_json_object(request, limit):
         content_type = request.headers.get("content-type", "")
         if content_type.split(";")[0].strip() != "application/json":
             refuse(415, "unsupported media type")
-        raw = await read_bounded(request, limit)
+        raw = await read_bounded(
+            request, limit, JSON_BODY_TIMEOUT_SECONDS)
         try:
-            value = json.loads(raw.decode("utf-8"))
+            value = json.loads(
+                raw.decode("utf-8"),
+                object_pairs_hook=_object_without_duplicates,
+                parse_constant=_reject_json_constant)
         except Exception:
             refuse(400, "invalid request")
         if not isinstance(value, dict):
@@ -916,7 +991,9 @@ def create_app(
                 refuse(429, "too many uploads")
             inflight["count"] += 1
         try:
-            data = await read_bounded(request, MAX_ORIGINAL_BYTES)
+            data = await read_bounded(
+                request, MAX_ORIGINAL_BYTES,
+                UPLOAD_BODY_TIMEOUT_SECONDS)
             try:
                 return await run_in_threadpool(
                     start_candidate, state, data, page_index)

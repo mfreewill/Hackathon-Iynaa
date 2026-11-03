@@ -70,9 +70,9 @@ from playwright.sync_api import expect, sync_playwright
 NAV_TIMEOUT_MS = 15_000
 ASSERT_TIMEOUT_MS = 10_000
 
-GRADE = "  الصَّفُّ ٥  "
+GRADE = "الصف الخامس"
 OBJECTIVE = "  هَدَفٌ: قِرَاءَةُ النَّصِّ ١٢٣ \U0001d11e  "
-UNSAVED_GRADE = "  الصَّفُّ ٦ غير المحفوظ  "
+UNSAVED_GRADE = "الصف السادس"
 NON_DURABLE_WARNING = (
     "مساحة تجريبية غير محفوظة: قد يؤدي تحديث الصفحة أو إغلاقها أو "
     "إعادة التشغيل إلى فقدان هذا العمل.")
@@ -263,7 +263,7 @@ class SetupSourceBrowserTests(unittest.TestCase):
                         "رقم الصفحة", exact=True)
                     file_input = page.get_by_label(
                         "ملف صفحة المصدر", exact=True)
-                    grade_input.fill(GRADE)
+                    grade_input.select_option(value=GRADE)
                     objective_input.fill(OBJECTIVE)
                     page_number_input.fill("1")
                     file_input.set_input_files({
@@ -568,7 +568,7 @@ class SetupSourceBrowserTests(unittest.TestCase):
                         "img", name="معاينة صفحة المصدر", exact=True)
                         ).to_have_count(0)
                     grade_input.click()
-                    grade_input.fill(UNSAVED_GRADE)
+                    grade_input.select_option(value=UNSAVED_GRADE)
                     expect(grade_input).to_have_value(UNSAVED_GRADE)
                     expect(grade_input).to_be_focused(
                         timeout=ASSERT_TIMEOUT_MS)

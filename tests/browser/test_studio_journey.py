@@ -354,7 +354,7 @@ class StudioJourneyBrowserTests(unittest.TestCase):
         expect(page_number).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
         self.assertEqual(self.count_requests("POST", START), 0)
         self.assertEqual(self.count_requests("POST", ANALYSIS), 0)
-        grade.fill(fx["GRADE"])
+        grade.select_option(value=fx["GRADE"])
         objective.fill(fx["OBJECTIVE"])
         page_number.fill("1")
 

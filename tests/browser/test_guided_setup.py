@@ -406,7 +406,7 @@ class GuidedSetupBrowserTests(unittest.TestCase):
     def prepare_one_page(self, page, context):
         """Fill the real setup inputs; prepare only (no analysis)."""
         fx = self.fx
-        page.get_by_label(GRADE_LABEL, exact=True).fill(fx["GRADE"])
+        page.get_by_label(GRADE_LABEL, exact=True).select_option(value=fx["GRADE"])
         page.get_by_label(OBJECTIVE_LABEL, exact=True).fill(
             fx["OBJECTIVE"])
         page.get_by_label(PAGE_LABEL, exact=True).fill("1")

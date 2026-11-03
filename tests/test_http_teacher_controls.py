@@ -149,7 +149,8 @@ def abstain_item(slot):
 class ControlsProvider:
     """Deterministic in-process test provider; never a default."""
 
-    def __init__(self):
+    def __init__(self, *, grade=GRADE):
+        self.expected_grade = grade
         self.requests = []
         self.source_results = {}
         self.question_results = {}
@@ -163,7 +164,7 @@ class ControlsProvider:
         return self._questions(request)
 
     def _source(self, request):
-        assert request["grade"] == GRADE
+        assert request["grade"] == self.expected_grade
         assert request["objective"] == OBJECTIVE
         assert request["media_type"] == "image/png"
         assert hashlib.sha256(
@@ -180,10 +181,10 @@ class ControlsProvider:
         reviewed = dict(request["reviewed_regions"])
         slots = [dict(slot) for slot in request["requested_slots"]]
         assert reviewed and set(reviewed.values()) == {EDITED_A, EDITED_B}
-        assert request["grade"] == GRADE
+        assert request["grade"] == self.expected_grade
         assert request["objective"] == OBJECTIVE
         assert request["prompt"] == question_prompt_v2(
-            reviewed, slots, grade=GRADE, objective=OBJECTIVE)
+            reviewed, slots, grade=self.expected_grade, objective=OBJECTIVE)
         river_id = next(
             region_id for region_id, text in reviewed.items()
             if text == EDITED_A)
@@ -553,8 +554,8 @@ class HttpTeacherControlsTracerTests(unittest.TestCase):
             self.assertEqual(
                 field_authors["cognitive_explanation"], "teacher")
             self.assertEqual(field_authors["bloom_level"], "model")
-            self.assertEqual(field_authors["grade"], "model")
-            self.assertEqual(field_authors["objective"], "model")
+            self.assertEqual(field_authors["grade"], "teacher")
+            self.assertEqual(field_authors["objective"], "teacher")
             self.assertEqual(
                 self.question(snapshot, "slot-understand"), baseline_q2)
             self.assertEqual(snapshot["preview_items"],

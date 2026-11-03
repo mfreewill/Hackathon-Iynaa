@@ -108,6 +108,7 @@ class QuestionView:
     anchors: tuple = ()
     required_order_relationships: tuple = ()
     field_authors: tuple = ()
+    teacher_edited: bool = False
 
 
 @dataclass(frozen=True)
@@ -954,12 +955,13 @@ class TeacherWorkspace:
                     tuple(p) for p in snap.current.required_order_relationships),
                 field_authors=tuple(sorted({
                     "question": "model", "answer_guidance": "model",
-                    "cognitive_explanation": "model", "grade": "model",
-                    "objective": "model",
+                    "cognitive_explanation": "model", "grade": "teacher",
+                    "objective": "teacher",
                     "hypothetical_assumptions": "model",
                     "evaluate_criteria": "model", "create_rubric": "model",
                     "bloom_level": rec.level_author,
-                    **rec.field_authors}.items()))))
+                    **rec.field_authors}.items())),
+                teacher_edited=rec.edit_revision > 0))
         return tuple(result), linked
 
     def _question_status(self, rec, core_current, blocks):
@@ -1077,15 +1079,10 @@ class TeacherWorkspace:
                 PreviewEntry(
                     question_id=q.question_id, question=q.current_question,
                     bloom_level=q.current_level,
-                    # Aggregate current-version author: any per-field
-                    # teacher edit (guidance, rationale, grade/objective,
-                    # assumptions, criteria/rubric, Bloom, wording)
-                    # makes this version teacher-edited. Untouched
-                    # fields keep their own authors; approval alone
-                    # never confers authorship.
-                    author=("teacher" if any(
-                        author == "teacher"
-                        for _, author in q.field_authors) else "model"),
+                    # Current-version author from actual edits only
+                    # (teacher_edited, edit_revision > 0), not any
+                    # field origin. Approval alone never confers it.
+                    author=("teacher" if q.teacher_edited else "model"),
                     answer_guidance=q.current_answer_guidance,
                     original_question=q.original_question,
                     original_answer_guidance=q.original_answer_guidance,

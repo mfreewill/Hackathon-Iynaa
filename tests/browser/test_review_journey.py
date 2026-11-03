@@ -103,7 +103,7 @@ AUTHOR_ARABIC = {
     "model": "النموذج", "teacher": "المعلم"}
 CURRENT_AUTHOR_ARABIC = {
     "model": "اقتراح النموذج كما ورد",
-    "teacher": "بصياغة المعلم الحالية"}
+    "teacher": "نسخة معدّلة بواسطة المعلم"}
 STATUS_ARABIC = {
     "draft": "مسودة", "approved": "معتمد", "rejected": "مرفوض",
     "outdated": "يحتاج إلى تحديث"}
@@ -174,6 +174,7 @@ def load_fixture():
 
     for name, expression in assignments.items():
         values[name] = evaluate(expression)
+    values['GRADE'] = 'الصف الخامس'
     module = ast.Module(body=generators, type_ignores=[])
     ast.fix_missing_locations(module)
     namespace = {"io": io, "Image": Image}
@@ -418,7 +419,7 @@ class ReviewJourneyBrowserTests(unittest.TestCase):
             self.assertEqual(response.status, 200, page.url)
             page.wait_for_load_state(
                 "networkidle", timeout=NAV_TIMEOUT_MS)
-            page.get_by_label("الصف الدراسي", exact=True).fill(
+            page.get_by_label("الصف الدراسي", exact=True).select_option(value=
                 fx["GRADE"])
             page.get_by_label("الهدف التعليمي", exact=True).fill(
                 fx["OBJECTIVE"])
@@ -804,9 +805,7 @@ class ReviewJourneyBrowserTests(unittest.TestCase):
                 expect(self.tid(card, "question-author")
                        ).to_have_text(
                     CURRENT_AUTHOR_ARABIC[
-                        "teacher" if any(author == "teacher"
-                            for _field, author in question["field_authors"])
-                        else "model"],
+                        "teacher" if question["teacher_edited"] else "model"],
                     timeout=ASSERT_TIMEOUT_MS)
                 expect(self.tid(card, "question-level")).to_have_text(
                     BLOOM_ARABIC[question["current_level"]],

@@ -30,7 +30,7 @@ from playwright.sync_api import expect, sync_playwright
 
 NAV_TIMEOUT_MS = 15_000
 ASSERT_TIMEOUT_MS = 10_000
-GRADE = "  الصَّفُّ ٥  "
+GRADE = "الصف الخامس"
 OBJECTIVE = "  هَدَفٌ: قِرَاءَةُ النَّصِّ ١٢٣ \U0001d11e  "
 REPLACEMENT_WARNING = (
     "الضغط على «بدء تحليل الصفحة» مجددًا سيستبدل مساحة العمل الحالية في هذه الجلسة — "
@@ -222,7 +222,7 @@ class SetupSourceSafetyTests(unittest.TestCase):
         warning = self.tid(page, "replacement-warning")
         expect(warning).to_be_hidden(timeout=ASSERT_TIMEOUT_MS)
         fields = self.fields(page)
-        fields["grade"].fill(GRADE)
+        fields["grade"].select_option(value=GRADE)
         fields["objective"].fill(OBJECTIVE)
         fields["page_number"].fill("1")
         self.set_file(page, filename, png)

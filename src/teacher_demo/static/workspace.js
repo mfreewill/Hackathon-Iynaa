@@ -691,14 +691,88 @@ function runSerialized(task) {
 
 class StageError extends Error {
   constructor(stage, status, detail, network = false,
-      unusableBody = false) {
+      unusableBody = false, exactTypedBodyRefusal = false) {
     super("request failed");
     this.stage = stage;
     this.status = status;
     this.detail = detail;
     this.network = network;
     this.unusableBody = unusableBody;
+    // Exact-envelope certificate derived once from the actual
+    // error response body (see readDetail). Manually built
+    // errors default to false and never gain it from detail.
+    this.exactTypedBodyRefusal = exactTypedBodyRefusal === true;
   }
+}
+
+// Exact before-body refusal certificates: the HTTP status, the
+// detail code and admission:"not_started" must match as one pair.
+// The detail may carry only code/admission plus the one fixed
+// message for that code; any other field, code or admission
+// proves nothing. The inner classifier below never certifies an
+// ordinary no-write by itself: ordinary handling also requires
+// the exact {detail} envelope certificate carried on StageError
+// (isExactTypedBodyRefusalEnvelope). The provider lane verifies
+// the same envelope in isKnownPreAdmissionRefusal first.
+const TYPED_BODY_REFUSALS = {
+  400: {
+    code: "request_body_timeout",
+    message: "request body timeout",
+  },
+  429: {
+    code: "body_reader_capacity_exceeded",
+    message: "body reader capacity exceeded",
+  },
+};
+
+function typedBodyRefusalCode(status, detail) {
+  const expected = TYPED_BODY_REFUSALS[status];
+  if (!expected || !detail || typeof detail !== "object"
+      || Array.isArray(detail)) {
+    return null;
+  }
+  const onlyCertificateFields = Object.keys(detail).every(
+    (key) => key === "code" || key === "admission"
+      || key === "message");
+  if (!onlyCertificateFields
+      || detail.code !== expected.code
+      || detail.admission !== "not_started"
+      || ("message" in detail
+        && detail.message !== expected.message)) {
+    return null;
+  }
+  return expected.code;
+}
+
+function isTypedBodyRefusal(status, detail) {
+  return typedBodyRefusalCode(status, detail) !== null;
+}
+
+// Exact root-envelope check over a successfully parsed body:
+// only a non-array object whose sole key is "detail", with the
+// exact inner certificate above. Any array, null, unrelated or
+// operation field (snapshot/request_id/raw_retention) fails.
+function isExactTypedBodyRefusalEnvelope(status, body) {
+  if (!body || typeof body !== "object" || Array.isArray(body)
+      || Object.keys(body).length !== 1 || !("detail" in body)) {
+    return false;
+  }
+  return isTypedBodyRefusal(status, body.detail);
+}
+
+// Callers must already hold exact-envelope proof: ordinary
+// callers gate on StageError.exactTypedBodyRefusal, the provider
+// lane on isKnownPreAdmissionRefusal. Copy certifies only this
+// attempt; it makes no currentness or preview promise.
+function typedBodyRefusalMessage(status, detail) {
+  const code = typedBodyRefusalCode(status, detail);
+  if (code === "request_body_timeout") {
+    return "لم يصل هذا الرفع أو الأمر كاملًا خلال الوقت المسموح، فلم يُطبَّق ولم يبدأ طلب في هذه المحاولة. حاول مجددًا بضغطة جديدة عندما تكون جاهزًا.";
+  }
+  if (code === "body_reader_capacity_exceeded") {
+    return "سعة استقبال الطلبات مشغولة الآن، فلم يُطبَّق هذا الرفع أو الأمر ولم يبدأ طلب في هذه المحاولة. انتظر قليلًا ثم حاول مجددًا بضغطة جديدة.";
+  }
+  return null;
 }
 
 // Responses that prove the server refused before committing; any
@@ -729,6 +803,14 @@ function isUncertainOutcome(error) {
   }
   if (error.network || error.unusableBody) {
     return true;
+  }
+  // Only the exact-envelope certificate derived from the actual
+  // response proves this attempt started no request. Truncated
+  // detail alone, a general 400 or an unknown/wrong-code 429
+  // earns nothing here and keeps the legacy stage behavior below.
+  if (error.exactTypedBodyRefusal === true
+      && isTypedBodyRefusal(error.status, error.detail)) {
+    return false;
   }
   // The one concrete session-capacity response proves the server
   // inserted no session. No other 503 gains this exception.
@@ -763,8 +845,7 @@ function enterUncertainOutcome() {
   sourceDetails.removeAttribute("open");
   sourceEmpty.textContent = UNKNOWN_SOURCE_NOTE;
   sourceEmpty.hidden = false;
-  setupError.textContent = UNKNOWN_STATUS;
-  setupError.hidden = false;
+  showSetupError(UNKNOWN_STATUS);
   statusLine.textContent = UNKNOWN_STATUS;
   for (const callback of uncertainCallbacks) {
     callback();
@@ -779,13 +860,24 @@ function detailCode(error) {
   return "";
 }
 
+// Reads an error body once and derives the exact-envelope
+// certificate from the complete parsed shape before discarding
+// it; only detail plus the boolean leave this function. A parse
+// failure yields no certificate and never infers one later.
 async function readDetail(response) {
+  let body;
   try {
-    const data = await response.clone().json();
-    return data && typeof data === "object" ? data.detail ?? null : null;
+    body = await response.clone().json();
   } catch {
-    return null;
+    return { detail: null, exactTypedBodyRefusal: false };
   }
+  const detail = body && typeof body === "object"
+    ? body.detail ?? null : null;
+  return {
+    detail,
+    exactTypedBodyRefusal: isExactTypedBodyRefusalEnvelope(
+      response.status, body),
+  };
 }
 
 async function readJsonBody(stage, response) {
@@ -823,11 +915,18 @@ async function apiFetch(stage, url, options = {}) {
     throw new StageError(stage, 0, null, true);
   }
   if (!response.ok) {
-    const detail = await readDetail(response);
+    const { detail, exactTypedBodyRefusal } =
+      await readDetail(response);
     notifyOrdinaryIdentityRefusal(
       stage, response.status, detail, sourceIdAtSend,
       generationAtSend);
-    throw new StageError(stage, response.status, detail);
+    // network/unusableBody stay explicitly false for a received
+    // error response: parse readability lives only in the
+    // certificate, so legacy definite refusals keep deciding
+    // every non-certified error exactly as before.
+    throw new StageError(
+      stage, response.status, detail, false, false,
+      exactTypedBodyRefusal);
   }
   return response;
 }
@@ -903,7 +1002,104 @@ function mutationHeaders(extra = {}) {
   return { "X-CSRF-Token": csrfToken, ...extra };
 }
 
+const SETUP_ERROR_ID = "setup-error";
+let setupErrorHomeParent = null;
+let setupErrorHomeNext = null;
+let setupErrorCulprit = null;
+let setupErrorCulpritInvalid = null;
+
+function ensureSetupErrorId() {
+  if (!setupError.id) {
+    setupError.id = SETUP_ERROR_ID;
+  }
+  return setupError.id;
+}
+
+function captureSetupErrorHome() {
+  if (!setupErrorHomeParent && setupError.parentNode) {
+    setupErrorHomeParent = setupError.parentNode;
+    setupErrorHomeNext = setupError.nextSibling;
+  }
+}
+
+function placeSetupErrorHome() {
+  captureSetupErrorHome();
+  if (!setupErrorHomeParent
+      || (setupError.parentNode === setupErrorHomeParent
+        && setupError.nextSibling === setupErrorHomeNext)) {
+    return;
+  }
+  const next = setupErrorHomeNext
+      && setupErrorHomeNext.parentNode === setupErrorHomeParent
+    ? setupErrorHomeNext : null;
+  setupErrorHomeParent.insertBefore(setupError, next);
+}
+
+function placeSetupErrorForField(target) {
+  const wrapper = typeof target.closest === "function"
+    ? target.closest(".field") || target.parentElement
+    : target.parentElement;
+  if (!wrapper) {
+    placeSetupErrorHome();
+    return;
+  }
+  let anchor = target;
+  while (anchor.parentElement && anchor.parentElement !== wrapper) {
+    anchor = anchor.parentElement;
+  }
+  wrapper.insertBefore(setupError, anchor.nextSibling);
+}
+
+function detachSetupErrorCulprit() {
+  const culprit = setupErrorCulprit;
+  if (!culprit) {
+    return;
+  }
+  setupErrorCulprit = null;
+  const describedBy = (culprit.getAttribute("aria-describedby") || "")
+    .split(/\s+/)
+    .filter((token) => token && token !== setupError.id);
+  if (describedBy.length) {
+    culprit.setAttribute("aria-describedby", describedBy.join(" "));
+  } else {
+    culprit.removeAttribute("aria-describedby");
+  }
+  if (culprit.getAttribute("aria-invalid") === "true") {
+    if (setupErrorCulpritInvalid === null) {
+      culprit.removeAttribute("aria-invalid");
+    } else {
+      culprit.setAttribute("aria-invalid", setupErrorCulpritInvalid);
+    }
+  }
+  setupErrorCulpritInvalid = null;
+}
+
+function attachSetupErrorCulprit(target) {
+  const errorId = ensureSetupErrorId();
+  setupErrorCulprit = target;
+  setupErrorCulpritInvalid = target.getAttribute("aria-invalid");
+  target.setAttribute("aria-invalid", "true");
+  const describedBy = (target.getAttribute("aria-describedby") || "")
+    .split(/\s+/).filter(Boolean);
+  if (!describedBy.includes(errorId)) {
+    describedBy.push(errorId);
+  }
+  target.setAttribute("aria-describedby", describedBy.join(" "));
+}
+
 function showSetupError(message, focusTarget = null) {
+  if (!setupError) {
+    return;
+  }
+  ensureSetupErrorId();
+  captureSetupErrorHome();
+  detachSetupErrorCulprit();
+  if (focusTarget) {
+    placeSetupErrorForField(focusTarget);
+    attachSetupErrorCulprit(focusTarget);
+  } else {
+    placeSetupErrorHome();
+  }
   setupError.textContent = message;
   setupError.hidden = false;
   if (focusTarget) {
@@ -912,13 +1108,57 @@ function showSetupError(message, focusTarget = null) {
 }
 
 function clearSetupError() {
+  if (!setupError) {
+    return;
+  }
+  detachSetupErrorCulprit();
   setupError.textContent = "";
   setupError.hidden = true;
+  placeSetupErrorHome();
+}
+
+function setupCulpritCorrected(target) {
+  if (target === fileInput) {
+    return Boolean(target.files && target.files.length);
+  }
+  if (target === pageNumberInput) {
+    return /^\d+$/.test(target.value)
+      && Number(target.value) >= 1
+      && Number(target.value) - 1 <= 999999999;
+  }
+  return typeof target.value === "string" && target.value.trim() !== "";
+}
+
+if (setupError) {
+  ensureSetupErrorId();
+}
+
+for (const setupField of [fileInput, gradeInput, objectiveInput,
+    pageNumberInput]) {
+  if (!setupField) {
+    continue;
+  }
+  const clearCorrectedSetupError = () => {
+    if (setupErrorCulprit === setupField
+        && setupCulpritCorrected(setupField)) {
+      clearSetupError();
+    }
+  };
+  setupField.addEventListener("input", clearCorrectedSetupError);
+  setupField.addEventListener("change", clearCorrectedSetupError);
 }
 
 function setupStageMessage(error) {
   if (isSessionExpiredError(error)) {
     return sessionExpiredMessage();
+  }
+  if (error.exactTypedBodyRefusal === true
+      && !error.network && !error.unusableBody) {
+    const bodyRefusal = typedBodyRefusalMessage(
+      error.status, error.detail);
+    if (bodyRefusal) {
+      return bodyRefusal;
+    }
   }
   if (error.status === 401 || error.status === 403) {
     return SESSION_MESSAGE;
@@ -951,6 +1191,14 @@ function analysisMessage(error) {
   }
   if (error.network) {
     return "تعذّر الاتصال بالخادم المحلي أثناء طلب التحليل. لم نُعد المحاولة تلقائيًا؛ تبقى الصفحة المعلنة كما هي، وحالة طلب التحليل نفسه غير مؤكدة.";
+  }
+  if (error.exactTypedBodyRefusal === true
+      && !error.unusableBody) {
+    const bodyRefusal = typedBodyRefusalMessage(
+      error.status, error.detail);
+    if (bodyRefusal) {
+      return bodyRefusal;
+    }
   }
   if (error.status === 401 || error.status === 403) {
     return SESSION_MESSAGE;
@@ -1156,6 +1404,14 @@ function isKnownPreAdmissionRefusal(status, body) {
     return Boolean(detail && typeof detail === "object"
       && detail.code === "retained_capacity_exceeded"
       && detail.admission === "not_started");
+  }
+  // Typed before-body certificates, through the one shared exact
+  // status+code+admission classifier. The body above already had
+  // to be only {detail}, so a body carrying snapshot, request_id
+  // or raw_retention never reaches this proof; a general 400, an
+  // unknown 429 or a generic timeout detail matches nothing.
+  if (isTypedBodyRefusal(status, detail)) {
+    return true;
   }
   const allowed = PRE_ADMISSION_REFUSALS[status];
   return Boolean(allowed && typeof detail === "string"
@@ -1481,18 +1737,24 @@ function classifyOriginalResponse(operation, status, body, readable) {
         }
       }
       const refusalDetail = detailOfBody(body);
-      const refusalStatus = status === 413
+      const refusalStatus = typedBodyRefusalMessage(
+          status, refusalDetail)
+        ?? (status === 413
           && refusalDetail && typeof refusalDetail === "object"
           && refusalDetail.code === "retained_capacity_exceeded"
           && refusalDetail.admission === "not_started"
-        ? "تعذّر قبول هذا الإرسال ضمن حدود مساحة العمل؛ لم يبدأ طلب لدى المزوّد في هذه المحاولة."
-        : OPERATION_REFUSED;
+          ? "تعذّر قبول هذا الإرسال ضمن حدود مساحة العمل؛ لم يبدأ طلب لدى المزوّد في هذه المحاولة."
+          : OPERATION_REFUSED);
       settleOperation(operation, {
         type: "refusal",
         outcome: null,
         snapshot: null,
         httpStatus: status,
         detail: detailOfBody(body),
+        // Derived here from the complete body so later message
+        // reconstruction never re-infers it from detail alone.
+        exactTypedBodyRefusal: isExactTypedBodyRefusalEnvelope(
+          status, body),
       }, refusalStatus);
       return;
     }
@@ -1860,7 +2122,8 @@ function analysisResultMessage(result) {
   }
   if (result.type === "refusal") {
     return analysisMessage(new StageError(
-      "analysis", result.httpStatus, result.detail));
+      "analysis", result.httpStatus, result.detail, false, false,
+      result.exactTypedBodyRefusal === true));
   }
   if (result.outcome === "cancelled") {
     return "أُلغي طلب تحليل المصدر قبل اكتماله ولم تُطبَّق نتيجته. تبقى صفحتك وإعداداتك كما هي.";
@@ -2302,8 +2565,10 @@ for (const name of Object.keys(panes)) {
 function syncTabs() {
   sourceTab.setAttribute(
     "aria-selected", String(activePane === "source"));
+  sourceTab.tabIndex = activePane === "source" ? 0 : -1;
   workTab.setAttribute(
     "aria-selected", String(activePane === "work"));
+  workTab.tabIndex = activePane === "work" ? 0 : -1;
 }
 
 function showActivePane() {
@@ -2438,6 +2703,36 @@ function showWork() {
 
 sourceTab.addEventListener("click", () => activatePane("source"));
 workTab.addEventListener("click", () => activatePane("work"));
+
+const paneTabOrder = ["source", "work"];
+
+function handlePaneTabKeydown(event) {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return;
+  }
+  const focusedName = event.currentTarget === sourceTab ? "source"
+    : event.currentTarget === workTab ? "work" : activePane;
+  const index = paneTabOrder.indexOf(focusedName);
+  let next = null;
+  if (event.key === "ArrowRight") {
+    next = paneTabOrder[(index + 1) % paneTabOrder.length];
+  } else if (event.key === "ArrowLeft") {
+    next = paneTabOrder[
+      (index - 1 + paneTabOrder.length) % paneTabOrder.length];
+  } else if (event.key === "Home") {
+    next = paneTabOrder[0];
+  } else if (event.key === "End") {
+    next = paneTabOrder[paneTabOrder.length - 1];
+  } else {
+    return;
+  }
+  event.preventDefault();
+  activatePane(next);
+  tabs[next].focus({ preventScroll: true });
+}
+
+sourceTab.addEventListener("keydown", handlePaneTabKeydown);
+workTab.addEventListener("keydown", handlePaneTabKeydown);
 
 narrowQuery.addEventListener("change", () => {
   const active = document.activeElement;

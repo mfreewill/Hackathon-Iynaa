@@ -11,15 +11,17 @@ key, account, credential, or external-provider authority exists.
 ## Routes
 
 - `GET /`, `GET /assets/workspace.css`, `GET /assets/workspace.js`,
-  `GET /assets/review.js`, `GET /assets/review-render.js`
+  `GET /assets/review.js`, `GET /assets/review-render.js`,
+  `GET /assets/studio.js`, `GET /assets/cairo.ttf`
   — the fixed same-origin teacher browser client (see
   "Browser client" below). These are the only client routes: an
   explicit route-to-packaged-file mapping in `http_client.py`, with
   no filename/path parameter, directory browsing, or generic
-  static mount. Responses carry the correct HTML/CSS/JS types,
+  static mount. Responses carry the correct HTML/CSS/JS types and
+  `font/ttf` for the font,
   `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, and
   a local-only Content-Security-Policy (same-origin script, style,
-  images and API calls; no inline script, external resource, or
+  font, images and API calls; no inline script, external resource, or
   `unsafe-eval`).
 - `POST /api/sessions` — create a session; returns the CSRF token and
   sets the `teacher_session` cookie (`HttpOnly`, `SameSite=strict`).
@@ -28,10 +30,12 @@ key, account, credential, or external-provider authority exists.
   page bytes; real decode, then one retained publication.
 - `GET /api/session/page`, `GET /api/session/page/original`,
   `GET /api/session/page/preview.png` — page metadata and downloads.
-- `POST /api/session/source-analysis` — begin a source provider
-  request; `201 {request_id, snapshot, raw_retention}` on success.
-- `POST /api/session/questions/generate` — begin a question provider
-  request against reviewed included regions only.
+- `POST /api/session/source-analysis` — begin a deliberate source
+  provider request with exact `{request_id, source_id}`;
+  `201 {request_id, snapshot, raw_retention}` on success.
+- `POST /api/session/questions/generate` — begin a deliberate question
+  provider request with exact `{request_id, source_id}`, against
+  reviewed included regions only.
 - `GET /api/session/snapshot` — the domain snapshot projection.
 - `GET /api/session/preview` — `{items}` from snapshot preview items.
 - `GET /api/session/requests/{request_id}/raw` — exact stored
@@ -63,7 +67,8 @@ key, account, credential, or external-provider authority exists.
   edited. An unknown region with an otherwise valid body is
   `404 {"detail": "region not found"}`.
 - `POST /api/session/requests/{request_id}/cancel` — close one
-  working request with `{}`; a running callable still runs.
+  working request with exact `{source_id}` (the `request_id` is in
+  the route); a running callable still runs.
 
 Every route requires an allowed `Host`. Session creation requires
 an allowed `Host` and `Origin`; a mutation on an existing session
@@ -76,22 +81,26 @@ clients/tests should be URL-quoted with `quote(..., safe='')`.
 
 ## Browser client
 
-The client is five packaged files (`static/index.html`,
+The client is seven packaged files (`static/index.html`,
 `static/workspace.css`, `static/workspace.js`, `static/review.js`,
-`static/review-render.js`; native ES modules and ordinary CSS,
-system Arabic fonts, no framework, bundler, CDN or external
+`static/review-render.js`, `static/studio.js`, `static/cairo.ttf`;
+native ES modules and ordinary CSS, with the bundled same-origin
+Cairo font, no framework, bundler, CDN or external
 request) registered on the same `create_app` by
 `http_client.register_client`. There is no separate client
-server or launcher in this repository: whoever launches
-`create_app` locally — with `allowed_hosts`/`allowed_origin` set
-to the actual served loopback origin — serves the page and the
+server. The existing local `launch.py` and optional
+`hosted_launch.py` launch `create_app` — with
+`allowed_hosts`/`allowed_origin` set to the actual served
+loopback origin — serving the page and the
 API from that one origin, and the browser is opened at `/` on it.
 The provider default is unchanged (`None`, disconnected); the
 browser cannot select a provider or hold a credential, and the
 CSRF token is kept only in page memory.
 
-The implemented Arabic RTL flow is setup → source review →
-questions → teacher preview. `workspace.js` alone owns the
+The implemented Arabic RTL Studio flow keeps creation,
+configuration, source confirmation, source review, individual
+question review, and teacher preview as separate stages.
+`workspace.js` alone owns the
 session/CSRF token, API transport, the serialized mutation owner,
 busy notification, source adoption and sticky uncertainty;
 `review.js` coordinates acknowledged snapshots, keyed local
@@ -100,15 +109,23 @@ authority; `review-render.js` only builds and updates keyed DOM
 nodes and never fetches. The page keeps one stable setup form
 (page file, grade, learning objective, one-based page number) and
 a Source pane: typing or selecting a file commits nothing, and
-the one primary action (`بدء تحليل الصفحة`) creates the visit's
-single session if needed, then sends the exact settings `PUT`,
-the octet-stream Start for the chosen page, and exactly one
-source-analysis `POST` — with repeat submission disabled while
-pending and no automatic retry. After a successful Start it
+the preparation action creates the visit's
+single session if needed, then sends the exact settings `PUT` and
+the octet-stream Start for the chosen page — with repeat
+submission disabled while pending and no automatic retry.
+Preparation sends no model request. After a successful Start it
 adopts the server metadata and shows the server-owned preview,
 exact original access, the selected page number, and collapsed
 source/render identities, captioned as a whole-page reference
-with no mask or localization claim. An acknowledged analysis
+with no mask or localization claim. Only after the teacher
+inspects the prepared page and explicitly confirms source
+analysis does the client send exactly one source-analysis `POST`,
+with exact `{request_id, source_id}`.
+Both the setup grade control and the question-editor grade
+control are native K-12 dropdowns offering an empty choice,
+kindergarten, and grades 1 through 12. The domain and API persist
+the grade as a string; those dropdowns do not promise any backend
+enum coercion. An acknowledged analysis
 snapshot is then reviewed in place: region text/label/inclusion
 edits and display moves, question generation against reviewed
 included regions, question edits, and explicit approve/reject
@@ -164,7 +181,7 @@ open editors/details and focus stay stable across metadata
 reads, status updates and pane switching.
 
 Every Start creates a new workspace, so the discard warning
-beside the same primary action follows the destructive operation,
+beside the same preparation action follows the destructive operation,
 not file metadata: it is hidden only before this visit's first
 committed source and then stays visible before every subsequent
 Start — including an unchanged file and page, a page-number-only
@@ -197,7 +214,7 @@ rest of the visit: it replaces the status with an explicit
 unknown-result message (`نتيجة الطلب غير معروفة`), hides the
 committed source reference, removes the preview `src` and the
 original link's `href`, keeps the exact draft inputs, and locks
-the primary action (the submit handler itself re-checks the lock,
+the preparation action (the submit handler itself re-checks the lock,
 so keyboard submission cannot write either). There is no retry,
 new session, compensation, or GET-based reconciliation — a later
 GET cannot prove an earlier delayed mutation will never commit —

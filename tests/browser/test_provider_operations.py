@@ -43,7 +43,7 @@ DECISION_ARABIC = {
     "outdated": "قرار المعلم: كان معتمدًا ويحتاج إلى مراجعة"}
 CURRENT_AUTHOR_ARABIC = {
     "model": "اقتراح النموذج كما ورد",
-    "teacher": "بصياغة المعلم الحالية"}
+    "teacher": "نسخة معدّلة بواسطة المعلم"}
 TEACHER_PREVIEW_WARNING = (
     "معاينة للمعلم فقط — ليست نشرًا للطلاب ولا اعتمادًا تربويًا نهائيًا.")
 NON_DURABLE_WARNING = (
@@ -376,7 +376,7 @@ class ProviderOperationBrowserTests(unittest.TestCase):
                 timeout=ASSERT_TIMEOUT_MS)
             expect(page_number_input).to_be_enabled(
                 timeout=ASSERT_TIMEOUT_MS)
-            grade_input.fill(
+            grade_input.select_option(value=
                 fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
             objective_input.fill(
                 fx["OBJECTIVE"], timeout=ASSERT_TIMEOUT_MS)

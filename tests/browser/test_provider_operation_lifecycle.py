@@ -602,7 +602,7 @@ class ProviderOperationLifecycleBrowserTests(unittest.TestCase):
         self.assertIsNotNone(response)
         self.assertEqual(response.status, 200, page.url)
         page.wait_for_load_state("networkidle", timeout=NAV_TIMEOUT_MS)
-        page.get_by_label("الصف الدراسي", exact=True).fill(
+        page.get_by_label("الصف الدراسي", exact=True).select_option(value=
             fx["GRADE"], timeout=ASSERT_TIMEOUT_MS)
         page.get_by_label("الهدف التعليمي", exact=True).fill(
             fx["OBJECTIVE"], timeout=ASSERT_TIMEOUT_MS)

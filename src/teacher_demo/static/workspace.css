@@ -1799,6 +1799,7 @@ button[aria-busy="true"],
   }
 
   .stages {
+    flex-wrap: wrap;
     gap: 0.3rem;
     padding: 0.3rem;
   }
@@ -1809,7 +1810,8 @@ button[aria-busy="true"],
 
   .stage-current,
   .stage:has(> button[aria-current="step"]) {
-    flex: 1 1 auto;
+    flex: 1 1 min-content;
+    min-width: min-content;
   }
 
   .stage button {
@@ -1829,6 +1831,13 @@ button[aria-busy="true"],
     clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
+  }
+
+  /* Enlarged text: the current label wraps at its words instead of
+     collapsing, and the stepper wraps above before it can overlap. */
+  .stage-current .step-label,
+  .stage:has(> button[aria-current="step"]) .step-label {
+    min-width: min-content;
   }
 
   .step-index {

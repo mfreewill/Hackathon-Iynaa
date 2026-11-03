@@ -10,12 +10,16 @@ teacher lesson preview.
 In short: Arabic page → Meta proposals → teacher decisions →
 evidence-linked lesson.
 
-Status: this source describes the local Studio candidate.
+Status: an existing Studio baseline was already deployed
+publicly.
+This source describes a changed local audit/repair candidate
+that is not yet deployed.
 A prior guided version was served at
 [hackathon-iynaa.site](https://hackathon-iynaa.site).
-These documents do not assert a Studio public cutover and do
-not by themselves establish which build is live.
-Any later cutover needs an exact-version read-back.
+These documents do not by themselves establish which exact
+build is currently live.
+Final release state requires an external verified
+exact-version readback, not this README.
 This README accompanies the source, which also runs locally
 by default.
 See [docs/HOSTING.md](docs/HOSTING.md) for the optional
@@ -341,18 +345,34 @@ is not browser proof.
 Do not run blanket browser discovery against the default
 disconnected mode.
 
-Browser suites require a separately served application
-and, depending on the suite, environment variables
-including `BROWSER_BASE_URL`, `BROWSER_EXECUTABLE`, and
-`BROWSER_ARTIFACT_DIR`.
+For the self-contained Studio browser smoke, see
+[docs/BROWSER_SMOKE.md](docs/BROWSER_SMOKE.md) and run the
+one existing command from the source root, substituting the
+actual installed Chrome path and a fresh artifact directory:
+
+```text
+python -B tools/run_studio_smoke.py --browser <installedChrome> --artifacts <freshdir>
+```
+
+That runner serves the application itself for this smoke.
+From an exact archive on Windows, it ran 1 method, with
+390/1280 viewport subTests.
+That run is synthetic, not Meta evidence, and gives no
+Safari or quality guarantee.
+
+Other browser suites still require a separately served
+application and, depending on the suite, environment
+variables including `BROWSER_BASE_URL`,
+`BROWSER_EXECUTABLE`, and `BROWSER_ARTIFACT_DIR`.
 Installing the Python Playwright package from
 `requirements-dev.txt` does not by itself prove that a
 browser executable exists at `BROWSER_EXECUTABLE`.
-Each browser suite needs matching server fixtures and
+Each other browser suite needs matching server fixtures and
 navigation-specific alignment before it can support a
 claim for the Studio composition.
-No blanket browser-green or all-browser-files-executed
-claim is made here.
+No claim is made here that all browser suites pass, and no
+blanket browser-green or all-browser-files-executed claim
+is made.
 
 ## Run the local teacher workspace
 
@@ -450,8 +470,10 @@ Full scope and limits are recorded in
   cases have been executed with a synthetic provider,
   including no-file settings access and visible keyboard focus after page preparation; that
   synthetic coverage is not exhaustive.
-  No new genuine application-model call occurred for
-  Studio.
+  A limited owner-reported title/illustration failure was
+  reproduced with real Meta against Studio, and the
+  contract correction was made locally; post-fix live
+  proof is PENDING and is not accepted here.
   Prior live-model evidence below stays bound to its
   pre-Studio version and does not become a Studio live
   result.
@@ -526,7 +548,8 @@ Studio here.
 ## Limitations
 
 - See Status at the top: these source documents do not
-  assert a Studio public cutover.
+  assert a public cutover of this pending repair candidate
+  or establish which exact build is currently live.
   No demonstration video, event submission, guaranteed
   learning gain, or public source-page rights are claimed
   here.

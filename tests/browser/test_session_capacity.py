@@ -36,7 +36,7 @@ NAV_TIMEOUT_MS = 15_000
 ASSERT_TIMEOUT_MS = 10_000
 MAX_SEED_ATTEMPTS = 16
 
-GRADE = "  الصَّفُّ ٥  "
+GRADE = "الصف الخامس"
 OBJECTIVE = "  هَدَفٌ: قِرَاءَةُ النَّصِّ ١٢٣  "
 UNKNOWN_PHRASE = "نتيجة الطلب غير معروفة"
 BOOT_FAILURE_STATUS = (
@@ -227,7 +227,7 @@ class SessionCapacityBrowserTests(unittest.TestCase):
                     "الهدف التعليمي", exact=True)
                 page_number = page.get_by_label(
                     "رقم الصفحة", exact=True)
-                grade.fill(GRADE)
+                grade.select_option(value=GRADE)
                 objective.fill(OBJECTIVE)
                 page_number.fill("1")
                 page.get_by_label(

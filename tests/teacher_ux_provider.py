@@ -90,7 +90,7 @@ CREATE_RUBRIC_B = (
 class TeacherUXProvider(metadata_fixture.ReviewMetadataProvider):
     """Metadata default plus structured/terminal teacher-UX modes."""
 
-    def __init__(self, mode="metadata", outcome=None):
+    def __init__(self, mode="metadata", outcome=None, *, grade=controls.GRADE):
         if mode not in ("metadata", "structured", "terminal"):
             raise ValueError("unknown teacher-UX provider mode")
         if mode == "terminal":
@@ -100,7 +100,7 @@ class TeacherUXProvider(metadata_fixture.ReviewMetadataProvider):
         elif outcome is not None:
             raise ValueError(
                 "outcome is only configurable in terminal mode")
-        super().__init__()
+        super().__init__(grade=grade)
         self._ux_mode = mode
         self._ux_outcome = outcome
         self._ux_question_count = 0

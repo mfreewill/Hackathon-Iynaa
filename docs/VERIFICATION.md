@@ -48,8 +48,11 @@ earlier genuine hosted rehearsal (2026-11-02), and
 professional teaching quality.
 Synthetic evidence and live-model evidence are separate
 layers.
-No new genuine application-model call occurred for
-Studio, and prior live-model evidence stays bound to its
+A limited owner-reported title/illustration failure was
+reproduced with real Meta against Studio, and the contract
+correction was made locally; post-fix live proof is
+PENDING and is not accepted here.
+Prior live-model evidence below stays bound to its
 pre-Studio version.
 The guided flow covered by the genuine runs is: prepare
 a page reference with no model request, inspect the exact
@@ -59,12 +62,16 @@ same-question edits before approval, and explicitly open
 the preview.
 None of the test results certifies teaching quality.
 
-Status: this source describes the local Studio candidate.
+Status: an existing Studio baseline was already deployed
+publicly.
+This source describes a changed local audit/repair candidate
+that is not yet deployed.
 A prior guided version was served at
 [hackathon-iynaa.site](https://hackathon-iynaa.site).
-These documents do not assert a Studio public cutover and
-do not by themselves establish which build is live.
-Any later cutover needs an exact-version read-back.
+These documents do not by themselves establish which exact
+build is currently live.
+Final release state requires an external verified
+exact-version readback, not this report.
 This report accompanies the source; it is not an
 always-current deployment-status statement.
 The newest genuine run below used deployed pre-Studio
@@ -92,6 +99,8 @@ with `default-src 'none'`, no external scripts, styles,
 or fonts, no eval or inline relaxation, and no generic
 static-path exposure.
 No new package, runtime service, or CDN is needed.
+No new runtime dependency is added by the verification work
+below; `jsonschema` is development-only.
 This replaces any earlier statement that no new runtime
 asset was added.
 
@@ -184,7 +193,9 @@ within that synthetic scope.
 Bounded geometry and keyboard checks are not physical
 Safari proof.
 
-No live inference is claimed for Studio itself.
+This synthetic section claims no post-fix live proof for
+Studio; that proof is PENDING (see the pending repair
+candidate below).
 Synthetic evidence in this section and live pre-Studio
 evidence in the genuine runs below are separate layers.
 Synthetic evidence is not genuine Meta educational
@@ -197,6 +208,41 @@ Deprecation and asynchronous warnings remain; no
 clean-log claim is made.
 No current moving test total is maintained in this file,
 and no latest count is guessed here.
+
+## Pending repair candidate — final verification not completed
+
+A limited owner-reported title/illustration failure was
+reproduced with real Meta against Studio.
+The local correction addresses a prompt/schema mismatch for
+status-conditioned abstention.
+Raw proposals remain separate from teacher-reviewed text,
+decisions, and preview items, and malformed output yields
+an honest failure rather than fabricated questions.
+No guarantee is made that every source produces questions.
+
+Post-fix live proof is PENDING and is not accepted here.
+New root and native tests for this candidate are under
+final verification, which is not completed, and no current
+pass count is stated.
+That pending verification also covers the native K-12 grade
+dropdown in both setup and the question editor (empty
+choice, kindergarten, and grades 1 through 12); the grade
+persists as a string, with no backend enum coercion promised.
+
+The exact browser recipe method is the one command in the
+README, from the `BROWSER_SMOKE` recipe:
+`python -B tools/run_studio_smoke.py --browser <installedChrome> --artifacts <freshdir>`.
+From an exact archive on Windows, it ran 1 method, with
+390/1280 viewport subTests.
+That run is synthetic, not Meta evidence, gives no Safari
+or quality guarantee, and is not a claim that all browser
+suites pass.
+
+An existing Studio baseline was already deployed publicly;
+this changed audit candidate is not yet deployed.
+No commit or currently live build is asserted here.
+Final release state is established only by external
+verified exact-version readback, not by this report.
 
 ## Genuine Meta rehearsals
 
@@ -372,6 +418,10 @@ That includes source-anchored validation, explicit
 teacher decisions, approval invalidation, preview
 eligibility, bounded lifecycles, refusal paths, and safe
 handling of synthetic failure metadata.
+Controlled JSON and request-body engineering tests
+establish only those tested contracts; they do not mean
+that all vulnerabilities are absent, that the system is
+secure in general, or that it is production-ready.
 
 Synthetic tests cannot establish that a genuine model
 reads a new Arabic page accurately, asks good questions
@@ -385,7 +435,8 @@ claims.
 - No professional human-teacher approval is recorded.
 - No accuracy or calibration rate is reported.
 - See Status at the top: these documents do not assert a
-  Studio public cutover.
+  public cutover of this pending repair candidate or
+  establish which exact build is currently live.
   No demonstration video, final event submission, or
   public source-page rights are recorded here, and
   endpoint read-backs carry no production-quality or

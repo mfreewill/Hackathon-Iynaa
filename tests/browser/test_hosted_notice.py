@@ -178,14 +178,14 @@ class TestHostedNotice(unittest.TestCase):
                     "session details must be closed before the form save and idle wait",
                 )
 
-                grade_value = "Grade 5 Synthetic"
+                grade_value = "الصف الخامس"
                 objective_value = "Synthetic objective 12345"
                 # Explicit navigation: reveal settings when hidden.
                 setup_settings = page.locator('[data-studio="setup-settings"]')
                 if (not grade.is_visible() and setup_settings.count() == 1
                         and setup_settings.is_visible()):
                     setup_settings.click()
-                grade.fill(grade_value)
+                grade.select_option(value=grade_value)
                 objective.fill(objective_value)
                 expect(settings_apply).to_contain_text("حفظ الصف والهدف", timeout=3000)
                 with page.expect_response(

@@ -68,7 +68,7 @@ SLOT_EVALUATE = "slot-evaluate"
 SLOT_CREATE = "slot-create"
 
 NEW_OBJECTIVE = "  هَدَفٌ جَدِيدٌ: قِرَاءَةُ النَّصِّ ٧٨٩  "
-CHANGED_GRADE = "  الصَّفُّ ٦  "
+CHANGED_GRADE = "الصف السادس"
 TEACHER_EDITED_WORDING = (
     "  صِيَاغَةُ الْمُعَلِّمِ الْمَحْفُوظَةُ لِسُؤَالِ التَّطْبِيقِ؟  ")
 TEACHER_EDITED_GUIDANCE = (
@@ -275,7 +275,9 @@ class TeacherUXCompletionBrowserTests(unittest.TestCase):
             self.tid(card, "question-edit").click(
                 timeout=ASSERT_TIMEOUT_MS)
         expect(form).to_be_visible(timeout=ASSERT_TIMEOUT_MS)
-        self.tid(card, field_testid).fill(
+        (self.tid(card, field_testid).select_option
+            if field_testid == "question-edit-grade"
+            else self.tid(card, field_testid).fill)(
             value, timeout=ASSERT_TIMEOUT_MS)
         path = self.h.question_path(question)
         response = self.h.capture_click(

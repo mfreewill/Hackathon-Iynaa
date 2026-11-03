@@ -13,7 +13,7 @@ export const INCLUSION_ARABIC = {
 };
 export const AUTHOR_ARABIC = { model: "النموذج", teacher: "المعلم" };
 export const CURRENT_AUTHOR_ARABIC = {
-  model: "اقتراح النموذج كما ورد", teacher: "بصياغة المعلم الحالية",
+  model: "اقتراح النموذج كما ورد", teacher: "نسخة معدّلة بواسطة المعلم",
 };
 export const STATUS_ARABIC = {
   draft: "مسودة", approved: "معتمد", rejected: "مرفوض",
@@ -40,7 +40,7 @@ export const BLOCK_ARABIC = {
   anchor_not_resolved:
     "تعذّر التحقق من أحد اقتباسات الدليل في النص المراجَع الحالي؛ راجع دليله قبل الاعتماد.",
   required_order_missing:
-    "يتطلب هذا السؤال ترتيبًا لازمًا بين مقطعين لم يُثبَّت بعد؛ راجع الترتيب قبل الاعتماد.",
+    "يتطلب هذا السؤال ترتيبًا لازمًا غير مؤكَّد بين مقطعين لا يمكن تسجيله في هذا العرض التجريبي؛ يبقى الاعتماد محظورًا، ويمكنك رفض هذا السؤال وطلب مسودة مختلفة مدعومة.",
   criterion_invalid:
     "معايير التقييم أو سلم الإنشاء في هذا السؤال غير مكتملة أو غير صالحة؛ راجعها قبل الاعتماد.",
 };
@@ -75,6 +75,9 @@ function arabicIndic(number) {
 }
 
 export function currentAuthor(question) {
+  if (typeof question.teacher_edited === "boolean") {
+    return question.teacher_edited ? "teacher" : "model";
+  }
   const pairs = Array.isArray(question.field_authors)
     ? question.field_authors : [];
   return pairs.some((pair) => Array.isArray(pair) && pair[1] === "teacher")
@@ -600,14 +603,40 @@ export function createQuestionCard(question, callbacks) {
     question: el("textarea", { testId: "question-edit-question" }),
     guidance: el("textarea", { testId: "question-edit-guidance" }),
     cognitive: el("textarea", { testId: "question-edit-cognitive" }),
-    grade: el("input", {
-      testId: "question-edit-grade", attrs: { type: "text" } }),
+    grade: el("select", { testId: "question-edit-grade" }),
     objective: el("input", {
       testId: "question-edit-objective", attrs: { type: "text" } }),
     level: el("select", { testId: "question-edit-level" }),
   };
   for (const [value, label] of Object.entries(BLOOM_ARABIC)) {
     fields.level.append(el("option", { text: label, attrs: { value } }));
+  }
+  // Grade options come from the setup #grade SELECT at creation, so
+  // the editor offers exactly its prompt plus the same K12 strings.
+  const setupGrade = document.getElementById("grade");
+  if (setupGrade) {
+    for (const source of setupGrade.options) {
+      fields.grade.append(el("option", {
+        text: source.textContent, attrs: { value: source.value } }));
+    }
+  }
+  // A historical grade with no setup option stays displayable as a
+  // disabled exact option: selectable by value on open (and by a
+  // discard restoring the current value), never re-offered as a new
+  // choice, and added at most once per distinct value.
+  function ensureGradeValue(value) {
+    const gradeValue = value ?? "";
+    for (const option of fields.grade.options) {
+      if (option.value === gradeValue) {
+        fields.grade.value = gradeValue;
+        return;
+      }
+    }
+    const legacy = el("option", {
+      text: gradeValue, attrs: { value: gradeValue } });
+    legacy.disabled = true;
+    fields.grade.append(legacy);
+    fields.grade.value = gradeValue;
   }
   for (const [field, key] of [
       [fields.question, "question"], [fields.guidance, "answer_guidance"],
@@ -684,7 +713,7 @@ export function createQuestionCard(question, callbacks) {
       fields.question.value = next.current_question;
       fields.guidance.value = next.current_answer_guidance;
       fields.cognitive.value = next.current_cognitive_explanation;
-      fields.grade.value = next.current_grade;
+      ensureGradeValue(next.current_grade);
       fields.objective.value = next.current_objective;
       fields.level.value = next.current_level;
       editForm.hidden = false;

@@ -109,6 +109,42 @@ class TestHostedNotice(unittest.TestCase):
                 ):
                     page.goto(base_url + "/", wait_until="domcontentloaded")
 
+                # Final compact shell: an always-visible unsaved
+                # summary; the full notice sits inside the
+                # session-details disclosure until it is opened.
+                unsaved_summary = page.locator(".unsaved-summary")
+                expect(unsaved_summary).to_be_visible(timeout=5000)
+                summary_text = unsaved_summary.inner_text()
+                self.assertTrue(
+                    "مؤقت" in summary_text or "موقت" in summary_text,
+                    "compact summary must call the session temporary (mu'aqqat)",
+                )
+                self.assertTrue(
+                    any(
+                        phrase in summary_text
+                        for phrase in (
+                            "غير محفوظ",
+                            "غير محفوظة",
+                            "غير المحفوظ",
+                            "غير المحفوظة",
+                            "لن يتم حفظ",
+                            "لا يتم حفظ",
+                            "لم يتم حفظ",
+                            "لن يحفظ",
+                            "لن يُحفظ",
+                            "لا يحفظ",
+                            "لا يُحفظ",
+                            "بدون حفظ",
+                        )
+                    ),
+                    "compact summary must truthfully say the work is unsaved",
+                )
+                session_details = page.locator("[data-testid=session-details]")
+                session_summary = session_details.locator("xpath=./summary[1]")
+                expect(session_summary).to_be_visible(timeout=5000)
+                if session_details.get_attribute("open") is None:
+                    session_summary.click()
+
                 expect(notice).to_be_visible(timeout=5000)
                 notice_text = notice.inner_text()
                 latin_digits = str(idle_seconds)
@@ -132,6 +168,15 @@ class TestHostedNotice(unittest.TestCase):
                 )
                 for promise in ("سيتم حفظ", "سيبقى محفوظ", "حفظ دائم", "محفوظ بشكل دائم"):
                     self.assertNotIn(promise, notice_text, "notice must not promise persisted work")
+
+                # Close the disclosure again before the form save
+                # and idle wait; expiry must surface while closed.
+                if session_details.get_attribute("open") is not None:
+                    session_summary.click()
+                self.assertIsNone(
+                    session_details.get_attribute("open"),
+                    "session details must be closed before the form save and idle wait",
+                )
 
                 grade_value = "Grade 5 Synthetic"
                 objective_value = "Synthetic objective 12345"
@@ -158,6 +203,10 @@ class TestHostedNotice(unittest.TestCase):
                     time.monotonic(),
                     put_at + idle_seconds - 0.25,
                     "expiry UI must appear only after the idle lease",
+                )
+                self.assertIsNone(
+                    session_details.get_attribute("open"),
+                    "expiry must be visible while session details stay closed",
                 )
 
                 self.assertEqual(grade.input_value(), grade_value)

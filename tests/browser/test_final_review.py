@@ -63,6 +63,18 @@ class FinalReviewBrowserTests(unittest.TestCase):
                 expect(flags).to_have_count(len(region["model_flags"]))
                 for flag_locator, flag in zip(
                         flags.all(), region["model_flags"]):
+                    # Open the flag's nearest ancestor disclosure
+                    # first when one wraps it; with no details (or
+                    # zero flags) this changes nothing.
+                    flag_details = flag_locator.locator(
+                        "xpath=ancestor::details[1]")
+                    if flag_details.count() > 0:
+                        flag_summary = flag_details.locator(
+                            "xpath=./summary[1]")
+                        expect(flag_summary).to_be_visible(
+                            timeout=timeout)
+                        if flag_details.get_attribute("open") is None:
+                            flag_summary.click()
                     expect(flag_locator).to_be_visible(timeout=timeout)
                     expect(flag_locator).to_have_text(
                         flag, timeout=timeout)
@@ -84,6 +96,17 @@ class FinalReviewBrowserTests(unittest.TestCase):
             raw = payload["provider_result"]["raw"]
 
             notes_box = helper.tid(page, "source-review-notes")
+            # Same disclosure handling as the flags: open the
+            # notes' nearest ancestor details (if any) through
+            # its direct summary before requiring visibility.
+            notes_details = notes_box.locator(
+                "xpath=ancestor::details[1]")
+            if notes_details.count() > 0:
+                notes_summary = notes_details.locator(
+                    "xpath=./summary[1]")
+                expect(notes_summary).to_be_visible(timeout=timeout)
+                if notes_details.get_attribute("open") is None:
+                    notes_summary.click()
             expect(notes_box).to_be_visible(timeout=timeout)
             for note in raw["review_notes"]:
                 expect(notes_box).to_contain_text(note, timeout=timeout)

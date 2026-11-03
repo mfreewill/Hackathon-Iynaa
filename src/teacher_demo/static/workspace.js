@@ -2167,6 +2167,17 @@ form.addEventListener("submit", (event) => {
   });
 });
 fileInput.addEventListener("change", updateReplacementWarning);
+function updateSelectedUploadName() {
+  const selectedUploadName = document.querySelector('[data-testid="selected-upload-name"]');
+  if (!selectedUploadName) {
+    return;
+  }
+  const selectedFile = fileInput.files && fileInput.files[0];
+  selectedUploadName.textContent = selectedFile ? selectedFile.name : "PDF أو صورة PNG/JPG";
+}
+fileInput.addEventListener("change", updateSelectedUploadName);
+updateSelectedUploadName();
+
 for (const setupInput of [fileInput, gradeInput, objectiveInput,
     pageNumberInput]) {
   if (!setupInput) {

@@ -10,13 +10,17 @@ source in its active step, save or discard edits explicitly,
 review Bloom drafts with save or discard before same-question
 approval, and explicitly open the approved-only preview.
 
-An earlier published build at
-[hackathon-iynaa.site](https://hackathon-iynaa.site) was read back
-on 2026-11-02.
-That dated observation does not verify the final guided UI or any
-other version; the final guided UI is locally verified and is not
-yet deployed there.
-Each deployed version requires its own version-specific read-back
+Status (2026-11-03): the guided flow is publicly deployed at
+[hackathon-iynaa.site](https://hackathon-iynaa.site) and has been
+read back there.
+The new art-directed visual revision of that flow — original
+inline vector artwork coded by Meta (not image-model output),
+purposeful CSS with reduced-motion support, a true Arabic file
+selector, and warning / source-flag summaries with exact full
+details behind disclosures — is verified locally only and is
+pending public cutover.
+A read-back on 2026-11-02 covered the build then live; each
+deployed version requires its own version-specific read-back
 and verification.
 This document accompanies the source; it is not an always-current
 deployment-status statement.

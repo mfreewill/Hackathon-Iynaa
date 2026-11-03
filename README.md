@@ -1,14 +1,15 @@
 # Hackathon Iynaa — Arabic page-to-lesson teacher demo
 
 A standalone demonstration for adult teachers.
-The public site link at
-[hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
-an earlier published build.
-The final guided user interface (UI) described here has been
-verified locally and is not yet deployed there.
-This README accompanies the source; it is not an always-current
-deployment-status statement.
-The source also runs locally by default.
+
+Status (2026-11-03): the guided teacher flow described here is
+publicly deployed at
+[hackathon-iynaa.site](https://hackathon-iynaa.site) and has been
+read back there.
+A new art-directed visual revision of that same flow is verified
+locally and is pending public cutover; it is not yet live.
+This README accompanies the source, which also runs locally by
+default; it is not an always-current deployment-status statement.
 See [docs/HOSTING.md](docs/HOSTING.md) for the hosted launcher.
 
 The teacher supplies one Arabic textbook page (صفحة عربية).
@@ -48,6 +49,10 @@ Hackathon and its `Build for Your World` theme.
 
 ## Teacher-controlled flow
 
+Choose file, grade, goal, and page → prepare → inspect → confirm
+analysis → review and choose included sections → generate →
+edit / approve / reject → preview.
+
 1. The teacher uploads a page file, selects one file-page, and
    sets the grade and learning objective, then clicks
    تهيئة الصفحة (Prepare page).
@@ -58,14 +63,16 @@ Hackathon and its `Build for Your World` theme.
    source request.
    No model call happens before that confirmation.
    In explicit Meta mode, the application then proposes source
-   sections for the full page, with review flags where attention
-   is needed.
+   sections for the full page, with a summary of current review
+   flags where attention is needed and the full raw flag details
+   available behind a disclosure.
 3. Work is guided one active step at a time: source review,
    question review, then preview.
    Explicit navigation between available steps does not reset the
    workspace.
-   In source review, section text and flags are shown before any
-   optional edit.
+   In source review, section text is shown with a flag summary
+   before any optional edit; the exact full flag details remain
+   available behind a disclosure.
    The teacher saves or discards edits explicitly, decides
    whether each section is included, excluded, or unresolved, and
    can adjust the displayed order.
@@ -92,6 +99,23 @@ Hackathon and its `Build for Your World` theme.
 Analysis covers the supplied full page.
 It does not claim tight localization of a region or passage on the
 page.
+
+## Visual revision
+
+The local revision noted in Status above restyles the same flow
+without changing it: a modern right-to-left composition for adult
+teachers, an original inline vector book / learning-growth
+illustration coded by Meta (not image-model output), and
+purposeful CSS with finite entrance and action transitions that
+respect reduced-motion settings.
+The file control is a true Arabic accessible selector backed by
+the native file picker.
+Temporary-work warnings show a compact summary with the exact
+full notices still accessible, while active errors and expiry
+stay visible; source flags likewise use summary plus full-details
+disclosure (see the flow above).
+No runtime dependency, network call, or content-security
+relaxation is added.
 
 ## Technical notes
 
@@ -262,7 +286,7 @@ executable exists at `BROWSER_EXECUTABLE`.
 Not every legacy browser suite has been migrated to the guided
 navigation; each needs matching server fixtures and
 navigation-specific migration before it can support a claim for
-the final UI.
+the guided or art-directed UI.
 No blanket browser-green or all-browser-files-executed claim is
 made here.
 
@@ -320,18 +344,14 @@ reverse proxy.
 Its disconnected default also makes no model request.
 Hosted Meta mode additionally requires the finite usage ledger
 described in [docs/HOSTING.md](docs/HOSTING.md).
-The public HTTPS link at
-[hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
-an earlier published build.
-For that earlier build, exact assets, the standard hosted
-launcher, protected anonymous session reads, secure session
-cookies, and the finite retained usage policy were read back on
-2026-11-02.
-The final guided UI in this source is locally verified and is not
-yet deployed there.
-That earlier read-back is not a production-quality or availability
-guarantee, and this README is not an always-current
-deployment-status statement.
+See Status (2026-11-03) at the top for what is live and what is
+pending cutover.
+On 2026-11-02, exact assets, the standard hosted launcher,
+protected anonymous session reads, secure session cookies, and
+the finite retained usage policy were read back for the build
+then live.
+That read-back is not a production-quality or availability
+guarantee.
 
 In hosted mode, the session expires after a configured period
 without HTTP activity.
@@ -355,24 +375,45 @@ Full scope and limits are recorded in
   [docs/VERIFICATION.md](docs/VERIFICATION.md).
   They are not current hosted totals and are not repeated here as
   moving latest numbers.
-  For the current guided candidate, the full local Windows root
-  run passed every applicable method, with one genuine-Linux-only
-  skip; the strict `NOT_PASS` for that skip is retained.
+  On Windows, the full local root run passed every applicable
+  method, with one genuine-Linux-only skip; the strict `NOT_PASS`
+  for that skip is retained, so no headline pass is claimed on
+  that basis.
   A genuine Ubuntu-on-WSL guard-module run, including the
   counterpart of the Windows-skipped test, passed.
   That guard run is not a full Linux root run, target-Linux proof,
-  or deployed-host evidence.
+  or deployed-host evidence; the target-Linux full-root result
+  for the art-directed source is still pending.
   Local real-application HTTP and Chrome regressions for the guided
   desktop and phone flow passed with synthetic providers,
   including prepare-then-confirm, source review, explicit save or
   discard before same-question approval, draft preservation,
   distinct request outcomes, and explicit preview.
-  No new genuine Meta request was made for this final UI.
-  An earlier full Linux root run and the genuine rehearsals below
-  remain historical evidence against earlier source; they are not
-  proof of this candidate.
-- Historical latest genuine hosted rehearsal (2026-11-02,
-  earlier source): real hosted
+  That synthetic UI evidence is a separate layer from live-model
+  evidence: the unchanged live pipeline was exercised before the
+  artwork in the distinct run below, and no live inference is
+  claimed for the final art revision itself.
+  An earlier full Linux root run and the earlier genuine
+  rehearsals below remain historical evidence against earlier
+  source.
+- Newest genuine guided run (2026-11-03, deployed pre-art guided
+  code; one private development page; one source call and one
+  question call, no retries): both calls returned HTTP 201, with
+  six raw drafts and no abstentions.
+  The source request took 237.833 seconds and the question
+  request 101.233 seconds; each is a single timing sample only,
+  not a benchmark or typical latency.
+  Six items reached a private preview only after explicit
+  developer review that edited all six current questions,
+  guidance, and explanations and downgraded three original
+  higher Bloom labels; no evidence or source text was rewritten.
+  Effective coverage is Remember 1, Understand 4, Create 1 —
+  not all six Bloom levels.
+  This is not raw-model-perfect output and not human-teacher
+  approval, and it is a distinct run, not combined with the
+  earlier rehearsals below.
+- Earlier genuine hosted rehearsal (2026-11-02,
+  earlier source, historical): real hosted
   source and question calls each returned HTTP 201.
   Source effort was `max`, question effort was `high`, and the
   selected output ceiling was 131072.
@@ -403,27 +444,23 @@ Full scope and limits are recorded in
 
 Those results do not certify transcription accuracy, Bloom level,
 grade fit, Arabic accuracy, or professional teaching quality.
-Source review and teacher-facing edits in both rehearsals were
+Source review and teacher-facing edits in these runs were
 model-assisted developer work, not approval by a human teacher.
 Warnings are not claimed absent, and the baseline logs were not
 clean.
 
 ## Limitations
 
-- The public demonstration link at
-  [hackathon-iynaa.site](https://hackathon-iynaa.site) is valid for
-  an earlier published build, and the source also supports local
-  use by default.
-  The final guided UI is locally verified but not yet deployed.
-  No completed release of that UI, demonstration video, or event
-  submission is claimed here.
-- One development page and one successful hosted question
-  request at `high` effort do not establish accuracy or
+- See Status (2026-11-03) at the top: the art-directed revision
+  is not yet publicly live.
+  No demonstration video or event submission is claimed here,
+  and no guaranteed learning gain is claimed anywhere.
+  The value shown is controlled, source-grounded preparation
+  with traceable teacher choices.
+- Single-page genuine runs do not establish accuracy or
   calibration.
-  In that historical hosted rehearsal, one of six raw drafts was
-  rejected, and the five preview items cover Remember,
-  Understand, and Create only.
-  Acceptance of all six Bloom levels is not claimed.
+  No run above covers all six Bloom levels after review, and
+  acceptance of all six levels is not claimed.
 - No professional human-teacher approval has been recorded.
 - In-memory workspace content can be lost on page refresh,
   browser close, hosted session expiry, or server restart.
@@ -452,7 +489,8 @@ clean.
 ## Meta AI and development attribution
 
 Meta AI built this standalone implementation and authored its
-application code and test suites.
+application code, test suites, and the original inline vector
+artwork in code (not image-model output).
 In explicit Meta mode, the application also uses Meta AI for
 page understanding and source-grounded question drafting.
 Those are distinct roles: building the implementation is separate

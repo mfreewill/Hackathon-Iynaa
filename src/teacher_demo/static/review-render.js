@@ -47,6 +47,29 @@ export const BLOCK_ARABIC = {
 export const BLOCK_UNKNOWN_ARABIC =
   "يوجد سبب آخر يمنع اعتماد هذا السؤال حاليًا؛ شرحه غير متاح.";
 
+// Display-only Arabic for known model-authored region labels.
+// Only the heading may show these; form values, the raw label
+// and source data always keep the exact original string, and
+// a teacher-authored or unknown label stays verbatim.
+const MODEL_LABEL_ARABIC = {
+  body: "النص الأساسي", title: "عنوان", subtitle: "عنوان فرعي",
+  heading: "عنوان", vocabulary: "مفردات", exercise: "تمرين",
+  instruction: "تعليمات", instructions: "تعليمات",
+  question: "سؤال", questions: "أسئلة", example: "مثال",
+  dialogue: "حوار", caption: "تعليق توضيحي", header: "ترويسة",
+  footer: "تذييل", footnote: "حاشية", note: "ملاحظة",
+  paragraph: "فقرة", other: "أخرى",
+};
+
+function displayRegionLabel(next) {
+  const label = next.current_label;
+  if (next.label_author !== "model" || typeof label !== "string") {
+    return label;
+  }
+  return Object.hasOwn(MODEL_LABEL_ARABIC, label)
+    ? MODEL_LABEL_ARABIC[label] : label;
+}
+
 function arabicIndic(number) {
   return String(number).replace(/\d/g, (digit) => "٠١٢٣٤٥٦٧٨٩"[digit]);
 }
@@ -137,10 +160,15 @@ export function createRegionItem(region, callbacks) {
   const requestIdLine = identifierLine(
     "معرّف الطلب", "region-request-id");
   const modelLine = identifierLine("النموذج", "region-model-name");
-  const flagsWrap = el("div");
-  const flagsLabel = el("span", { text: "تنبيهات النموذج: " });
+  const flagsWrap = el("div", { className: "model-review-flags" });
+  const flagsSummary = el("p", {
+    className: "model-review-flags-summary" });
+  const flagsDetails = el("details", {
+    className: "model-review-flags-details" });
   const flags = el("ul", { className: "region-flags" });
-  flagsWrap.append(flagsLabel, flags);
+  flagsDetails.append(
+    el("summary", { text: "تنبيهات النموذج كما وردت" }), flags);
+  flagsWrap.append(flagsSummary, flagsDetails);
   const linkedWrap = el("div", { testId: "region-linked-questions" });
   const currentText = el("p", {
     className: "region-current-text", testId: "region-current-text" });
@@ -173,24 +201,36 @@ export function createRegionItem(region, callbacks) {
   const commit = button(
     "region-review-commit", "حفظ مراجعة المقطع",
     () => callbacks.onRegionCommit(id));
+  commit.className =
+    "review-action review-action-primary review-action-save";
   const cancel = button(
     "region-review-cancel", "إلغاء التعديل",
     () => callbacks.onRegionCancel(id));
+  cancel.className =
+    "review-action review-action-secondary review-action-cancel";
   const moveUp = button(
     "region-move-up", "نقل المقطع لأعلى",
     () => callbacks.onRegionMove(id, "up"));
+  moveUp.className =
+    "review-action review-action-secondary review-action-order";
   moveUp.setAttribute("aria-label", "نقل المقطع لأعلى");
   const moveDown = button(
     "region-move-down", "نقل المقطع لأسفل",
     () => callbacks.onRegionMove(id, "down"));
+  moveDown.className =
+    "review-action review-action-secondary review-action-order";
   moveDown.setAttribute("aria-label", "نقل المقطع لأسفل");
   const evidence = button(
     "region-evidence-link", "إظهار الصفحة الكاملة",
     () => callbacks.onRegionEvidence(id));
-  // Read-mode default: acknowledged text, flags and the explicit
-  // inclusion choice/save stay visible. The optional text/label
-  // editor is a view-only disclosure owned here; its values stay
-  // the coordinator's keyed draft and the toggle sends nothing.
+  evidence.className =
+    "review-action review-action-secondary review-action-evidence";
+  // Read-mode default: acknowledged text, a short model-flag
+  // summary and the explicit inclusion choice/save stay visible;
+  // the exact flag strings keep their own named disclosure. The
+  // optional text/label editor is a view-only disclosure owned
+  // here; its values stay the coordinator's keyed draft and the
+  // toggle sends nothing.
   const editor = el("div", { className: "region-editor" });
   editor.hidden = true;
   editor.append(
@@ -205,13 +245,20 @@ export function createRegionItem(region, callbacks) {
         textInput.focus();
       }
     });
+  editToggle.className =
+    "review-action review-action-secondary review-action-edit";
   editToggle.setAttribute("aria-expanded", "false");
   const form = el("div", { className: "review-form" });
   form.append(
     editor, labeledField("قرار التضمين", inclusionInput));
-  const actions = el("div", { className: "item-actions" });
-  actions.append(editToggle, commit, cancel, moveUp, moveDown, evidence);
-  form.append(actions);
+  const primaryActions = el("div", {
+    className: "item-actions review-card-primary-actions" });
+  primaryActions.append(commit);
+  const secondaryActions = el("div", {
+    className: "item-actions review-card-secondary-actions" });
+  secondaryActions.append(
+    editToggle, cancel, moveUp, moveDown, evidence);
+  form.append(primaryActions, secondaryActions);
 
   const original = el("details", { testId: "region-original" });
   const summary = el("summary", { text: "النص الأصلي كما ورد" });
@@ -220,9 +267,18 @@ export function createRegionItem(region, callbacks) {
   const rawLabel = el("span", { testId: "region-raw-label" });
   rawLabelLine.append("التصنيف الأصلي: ", rawLabel);
   original.append(summary, rawText, rawLabelLine);
-  node.append(heading, currentText, flagsWrap, inclusionState,
-    positionLine.line, textAuthorLine.line, labelAuthorLine.line,
-    requestIdLine.line, modelLine.line, linkedWrap, form, original);
+  const headingWrap = el("div", { className: "review-card-heading" });
+  headingWrap.append(heading);
+  const metaWrap = el("div", { className: "review-card-meta" });
+  metaWrap.append(
+    inclusionState, textAuthorLine.line, labelAuthorLine.line);
+  const provenanceDetails = el("details", {
+    className: "source-provenance", testId: "region-details" });
+  provenanceDetails.append(
+    el("summary", { text: "تفاصيل المصدر" }),
+    positionLine.line, requestIdLine.line, modelLine.line);
+  node.append(headingWrap, currentText, flagsWrap, metaWrap,
+    provenanceDetails, linkedWrap, form, original);
 
   let linkedSignature = null;
   let linkedEntries = [];
@@ -256,7 +312,7 @@ export function createRegionItem(region, callbacks) {
       requestIdLine.value.textContent =
         provenance?.requestIdText ?? requestIdTextOf(next);
       modelLine.value.textContent = provenance?.modelName ?? UNAVAILABLE;
-      heading.textContent = next.current_label;
+      heading.textContent = displayRegionLabel(next);
       // Acknowledged text only; uncommitted typing lives in the
       // coordinator draft and the (possibly open) editor fields.
       currentText.textContent = next.current_text;
@@ -269,9 +325,13 @@ export function createRegionItem(region, callbacks) {
         AUTHOR_ARABIC[next.text_author] || next.text_author;
       labelAuthorLine.value.textContent =
         AUTHOR_ARABIC[next.label_author] || next.label_author;
-      flags.replaceChildren(...(next.model_flags || []).map(
+      const modelFlags = next.model_flags || [];
+      flags.replaceChildren(...modelFlags.map(
         (flag) => el("li", { testId: "region-model-flag", text: flag })));
-      flagsWrap.hidden = !(next.model_flags || []).length;
+      flagsSummary.textContent = modelFlags.length
+        ? `تنبيهات النموذج (${arabicIndic(modelFlags.length)}) تحتاج إلى مراجعة؛ الصياغة الكاملة في «تنبيهات النموذج كما وردت».`
+        : "";
+      flagsWrap.hidden = !modelFlags.length;
       setValueIfIdle(textInput, draft.current_text);
       setValueIfIdle(labelInput, draft.current_label);
       setValueIfIdle(inclusionInput, draft.inclusion);
@@ -518,12 +578,18 @@ export function createQuestionCard(question, callbacks) {
   const editButton = button(
     "question-edit", "تحرير السؤال",
     () => callbacks.onQuestionEditToggle(id));
+  editButton.className =
+    "review-action review-action-secondary review-action-edit";
   const approveButton = button(
     "question-approve", "اعتماد السؤال",
     () => callbacks.onQuestionApprove(id));
+  approveButton.className =
+    "review-action review-action-primary review-action-approve";
   const rejectButton = button(
     "question-reject", "رفض السؤال",
     () => callbacks.onQuestionReject(id));
+  rejectButton.className =
+    "review-action review-action-destructive review-action-reject";
   const actions = el("div", { className: "item-actions" });
   actions.append(editButton, approveButton, rejectButton);
 
@@ -582,8 +648,14 @@ export function createQuestionCard(question, callbacks) {
     generationGradeLine.line, generationObjectiveLine.line,
     requestIdLine.line, modelLine.line, cognitiveLine.line,
     evidenceWrap, orderWrap, assumptionsWrap, criteriaWrap);
-  node.append(heading, statusLine.line, decision, author,
-    levelLine.line, guidanceLine.line, blocks, draftStatus,
+  const headingWrap = el("div", {
+    className: "review-card-heading question-card-heading" });
+  headingWrap.append(heading);
+  const metaWrap = el("div", {
+    className: "review-card-meta question-card-meta" });
+  metaWrap.append(decision, author, levelLine.line);
+  node.append(headingWrap, statusLine.line, metaWrap,
+    guidanceLine.line, blocks, draftStatus,
     actions, details, original, editForm);
 
   let evidenceSignature = null;
@@ -746,7 +818,7 @@ export function createPreviewItem(entry, callbacks) {
   const extrasWrap = el("div");
   checking.append(
     el("summary", { text: "مواد التحقق" }), guidance, factsWrap,
-    extrasWrap);
+    extrasWrap, requestIdLine.line, modelLine.line);
   const original = el("details", { testId: "preview-original" });
   const originalText = el("p", { testId: "preview-original-text" });
   const originalGuidance = el("p", {
@@ -762,8 +834,13 @@ export function createPreviewItem(entry, callbacks) {
     originalParts.level, originalParts.evidence,
     originalParts.order, originalParts.assumptions,
     originalParts.criteria, originalParts.rubric);
-  node.append(heading, author, decision, levelLine.line,
-    requestIdLine.line, modelLine.line, checking, original);
+  const headingWrap = el("div", {
+    className: "review-card-heading preview-card-heading" });
+  headingWrap.append(heading);
+  const metaWrap = el("div", {
+    className: "review-card-meta preview-card-meta" });
+  metaWrap.append(author, decision, levelLine.line);
+  node.append(headingWrap, metaWrap, checking, original);
   let factsSignature = null;
   return {
     node,

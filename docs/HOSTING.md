@@ -26,15 +26,20 @@ platform.
 The public API, domain, transport, and approval rules are
 unchanged.
 
-Status: this source describes the local Studio candidate.
-A prior guided version was served at
+Status: this released Studio source was deployed on
+2026-11-03 at
 [hackathon-iynaa.site](https://hackathon-iynaa.site).
-These documents do not assert a Studio public cutover and
-do not by themselves establish which build is live.
-Any later cutover needs an exact-version read-back.
-A read-back on 2026-11-02 covered the build then live;
-each deployed version requires its own version-specific
-read-back and verification.
+Exact source, the service entrypoint, served assets,
+secure session behavior, and the retained usage policy
+were verified on deployment.
+On 2026-11-04, five served assets still matched the
+checkout.
+This records the observed state, not indefinite
+availability, and this documentation correction changes
+no application bytes.
+A read-back on 2026-11-02 covered the build then live
+and remains historical; each deployed version requires
+its own version-specific read-back and verification.
 This document accompanies the source; it is not an
 always-current deployment-status statement.
 A ready domain or certificate does not by itself prove a

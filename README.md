@@ -10,20 +10,58 @@ teacher lesson preview.
 In short: Arabic page → Meta proposals → teacher decisions →
 evidence-linked lesson.
 
-Status: an existing Studio baseline was already deployed
-publicly.
-This source describes a changed local audit/repair candidate
-that is not yet deployed.
-A prior guided version was served at
+## Current release and demonstration
+
+Current release: Studio was deployed on 2026-11-03 at
 [hackathon-iynaa.site](https://hackathon-iynaa.site).
-These documents do not by themselves establish which exact
-build is currently live.
-Final release state requires an external verified
-exact-version readback, not this README.
-This README accompanies the source, which also runs locally
-by default.
+Exact source, the service entrypoint, served assets,
+secure session behavior, and the retained usage policy
+were verified on deployment.
+On 2026-11-04, five served assets still matched the
+checkout.
+This records the observed state, not indefinite
+availability.
+This documentation correction changes no application bytes.
+The source also runs locally by default.
 See [docs/HOSTING.md](docs/HOSTING.md) for the optional
 hosted launcher.
+
+[Watch the demo](https://drive.google.com/file/d/1m28sUrhKsPEbPvYUZyNf43UT_WfMpdBh/view?usp=drivesdk)
+
+The approved demonstration is an edited 111.3-second
+(16:9) recording with English narration and subtitles and
+an Arabic user interface.
+It shows the current deployed Studio recorded on
+2026-11-03, not a synthetic or pre-Studio run.
+It is an edited developer demonstration with real captured
+footage, source attribution, and held-frame disclosures,
+not a new live session or a finished teaching lesson.
+The recording retains a private-review label.
+ElevenLabs was used solely for the video narration; it is
+not an application feature or a Meta-generated voice.
+
+In that recording, one source request and one question
+request each returned HTTP 201.
+They produced six raw drafts and no abstentions.
+After explicit model-assisted developer edits, three items
+reached the preview and three were rejected.
+The effective preview covers Understand 2 and Remember 1
+only, originals were preserved, and the source text had
+been explicitly shortened to the selected reviewed passage.
+The teacher role was developer-operated.
+This is not professional human-teacher approval or gold,
+and it does not show six valid Bloom levels.
+
+Current root verification is summarized under Measured
+evidence and in [docs/VERIFICATION.md](docs/VERIFICATION.md):
+Linux passed with no skips, while the strict Windows
+result is NOT_PASS (see that section for the distinction).
+
+> Correction, 2026-11-04: earlier wording that described
+> this release as undeployed and its live proof as pending
+> described pre-release evidence.
+> It is superseded by the observed 2026-11-03 deployment,
+> recording, and verification recorded in these documents.
 
 This is a separate implementation built around the
 pre-existing Iynaa product idea and prior educational
@@ -355,8 +393,8 @@ python -B tools/run_studio_smoke.py --browser <installedChrome> --artifacts <fre
 ```
 
 That runner serves the application itself for this smoke.
-From an exact archive on Windows, it ran 1 method, with
-390/1280 viewport subTests.
+From the exact archive on Windows, it passed 1 method,
+with 390/1280 viewport subTests.
 That run is synthetic, not Meta evidence, and gives no
 Safari or quality guarantee.
 
@@ -430,13 +468,12 @@ an HTTPS reverse proxy.
 Its disconnected default also makes no model request.
 Hosted Meta mode additionally requires the finite usage
 ledger described in [docs/HOSTING.md](docs/HOSTING.md).
-See Status at the top for what these documents do and do
-not assert about what is live.
-On 2026-11-02, exact assets, the standard hosted
-launcher, protected anonymous session reads, secure
-session cookies, and the finite retained usage policy
-were read back for the build then live.
-That read-back is not a production-quality or
+See Current release and demonstration at the top for the
+observed 2026-11-03 deployment and the 2026-11-04 check
+that five served assets still matched the checkout.
+An earlier read-back on 2026-11-02 covered the build then
+live and remains historical.
+Neither read-back is a production-quality or indefinite
 availability guarantee.
 
 In hosted mode, the session expires after a configured
@@ -458,30 +495,54 @@ Local mode has no hosted idle lease.
 Full scope and limits are recorded in
 [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
-- Root and browser counts for the first public-code
+- Current released root tests (synthetic providers, zero
+  application-model calls): the complete ordinary root
+  test population from the exact released archive passed
+  on real Linux with no skips.
+  On Windows, the complete root population was exercised,
+  all applicable methods passed, and one
+  genuine-Linux-only test was skipped.
+  The strict Windows result therefore remains NOT_PASS;
+  it is never described here as all-PASS.
+  Deprecation and asynchronous-test warnings remain, so
+  no clean-log claim is made.
+  The exact archived Studio browser smoke passed on
+  Windows at its narrow and desktop viewport subtests.
+  It is synthetic, not all browser files and not physical
+  Safari.
+  The complete local journey plus specific boundary cases
+  have also been executed with a synthetic provider,
+  including no-file settings access and visible keyboard focus after page preparation.
+  Those targeted proofs are not blanket coverage.
+  Root and browser counts for the first public-code
   baseline are recorded as historical results in
   [docs/VERIFICATION.md](docs/VERIFICATION.md).
-  They are not current hosted totals and are not repeated
-  here as moving latest numbers.
-  Current final verification for this Studio source is
-  recorded separately from the exact packaged sources and
-  raw test results; it is not asserted here as complete.
-  The complete new local journey plus specific boundary
-  cases have been executed with a synthetic provider,
-  including no-file settings access and visible keyboard focus after page preparation; that
-  synthetic coverage is not exhaustive.
-  A limited owner-reported title/illustration failure was
-  reproduced with real Meta against Studio, and the
-  contract correction was made locally; post-fix live
-  proof is PENDING and is not accepted here.
-  Prior live-model evidence below stays bound to its
-  pre-Studio version and does not become a Studio live
-  result.
-  An earlier full Linux root run and the earlier genuine
-  rehearsals below remain historical evidence against
-  earlier source.
-- Newest genuine guided run (2026-11-03, deployed
-  pre-art guided code; one private development page; one
+  They are not current hosted totals.
+- Post-fix title-only / illustration case (released
+  source, real requests): one supported title-recall
+  draft and five abstentions.
+  This is bounded live evidence for the corrected
+  abstention contract, not a zero-failure guarantee for
+  every source or reader.
+  Other post-fix page probes produced unreadable source
+  proposals that were manually withheld before
+  generation, and other drafts needed Bloom or
+  answer-guidance corrections.
+  Neither HTTP 201 nor schema conformance establishes
+  educational accuracy.
+- Current Studio recording (2026-11-03, deployed
+  Studio): see Current release and demonstration at the
+  top for the precise result — six raw drafts, no
+  abstentions, three preview items (Understand 2,
+  Remember 1) and three rejected after explicit
+  model-assisted developer edits.
+  An earlier failed recording attempt remains a failure;
+  the later success does not establish general
+  reliability.
+  Older live-model evidence below stays bound to its
+  pre-Studio versions and is historical.
+- Historical genuine guided run (2026-11-03, deployed
+  pre-art, pre-Studio guided code; one private development page; one
   source call and one question call, no retries): both
   calls returned HTTP 201, with six raw drafts and no
   abstentions.
@@ -514,8 +575,8 @@ Full scope and limits are recorded in
   The approved-only preview, preserved originals, and
   evidence links were verified.
   The standard public launcher was checked after this
-  rehearsal; no second full model run occurred after that
-  cutover.
+  rehearsal; at that stage, no second full model run had
+  occurred after that cutover.
   The observed source request took 119.045 seconds and
   the observed question request took 105.176 seconds.
   Each is one observed request only, not a benchmark,
@@ -547,14 +608,18 @@ Studio here.
 
 ## Limitations
 
-- See Status at the top: these source documents do not
-  assert a public cutover of this pending repair candidate
-  or establish which exact build is currently live.
-  No demonstration video, event submission, guaranteed
-  learning gain, or public source-page rights are claimed
-  here.
+- The observed deployment at the top is not an
+  indefinite availability, event-acceptance, guaranteed
+  learning-gain, or blanket public source-page rights
+  claim.
   The value shown is controlled, source-grounded
   preparation with traceable teacher choices.
+- Source quality varies: some post-fix page probes gave
+  unreadable source proposals that were withheld before
+  generation, and some drafts needed Bloom or
+  answer-guidance corrections.
+  A successful response does not prove educational
+  accuracy.
 - Single-page genuine runs do not establish accuracy or
   calibration.
   No run above covers all six Bloom levels after review,
@@ -578,10 +643,19 @@ Studio here.
 - Do not add real keys, private uploads, student
   material, local databases, a hosted usage store, logs,
   or generated TLS private keys to the repository.
-- The published fixtures are synthetic.
+- The published fixtures are synthetic and contain no
+  private source pages.
   No actual textbook page, teacher or student data,
   private log, or screenshot from the genuine rehearsals
-  is included.
+  is included in the repository.
+- The demonstration video shows only the one recorded
+  historical Princeton / Arabic Collections Online page
+  approved for that video, with attribution in the
+  recording.
+  Arabic Collections Online describes its materials as
+  believed to be in the public domain.
+  That narrow approval is not blanket rights to other
+  books or pages.
 - A rights reference in the workspace is metadata only.
   It is not legal clearance for source material or
   publication.
@@ -622,5 +696,6 @@ No license has been selected.
 Nothing in this README selects one or clears rights for a
 future textbook page, dependency set, hosting, or wider
 release.
-No final video, submission, or public source-page rights
-are asserted here.
+Approval of the demonstration video for judging access
+does not select a project license or grant blanket
+public source-page rights.

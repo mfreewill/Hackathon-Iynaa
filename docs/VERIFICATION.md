@@ -28,54 +28,60 @@ The generation failure or abstention summary remains
 readable; full slot outcomes and raw technical metadata
 are disclosed on demand.
 
-Root and browser counts below for the first public-code
-baseline are historical results.
-They are not current hosted acceptance totals.
-Hosted verification methods are described separately,
-without manually maintained latest counts in this file.
-Current final verification for this Studio source is
-recorded separately from the exact packaged sources and
-raw test results; it is not asserted here as complete.
+## Current release and newest recording
+
+Studio was deployed on 2026-11-03 at
+[hackathon-iynaa.site](https://hackathon-iynaa.site).
+Exact source, the service entrypoint, served assets,
+secure session behavior, and the retained usage policy
+were verified on deployment.
+On 2026-11-04, five served assets still matched the
+checkout.
+This is observed state, not indefinite availability.
+This documentation correction changes no application bytes.
+
+The newest real Studio recording was made on 2026-11-03
+against that deployed Studio.
+One source request and one question request each returned
+HTTP 201, with six raw drafts and no abstentions.
+After explicit model-assisted developer edits, three items
+reached the preview and three were rejected.
+The effective preview covers Understand 2 and Remember 1
+only; originals were preserved.
+See the current recording section below for limits.
+The approved edited video linked from the README is
+111.3 seconds, with English narration and subtitles and
+an Arabic user interface.
+
+Current released root verification is recorded below:
+Linux passed the complete ordinary root population with
+no skips, while Windows remains NOT_PASS in the strict
+sense because one genuine-Linux-only test was skipped.
+Root and browser counts for the first public-code
+baseline remain historical results.
+They are not current hosted totals.
 This file describes verification methods and limits and
 makes no safety guarantee.
 
 The sections below keep these kinds of evidence separate:
-historical root tests, historical browser tests, current
-local synthetic Studio verification, earlier hosted
-verification, the distinct newest genuine guided run
+current released synthetic root and browser verification,
+historical root tests, historical browser tests, bounded
+post-fix live evidence, the current Studio recording
+(2026-11-03), the historical genuine guided run
 (2026-11-03), the historical local genuine rehearsal, the
 earlier genuine hosted rehearsal (2026-11-02), and
 professional teaching quality.
 Synthetic evidence and live-model evidence are separate
 layers.
-A limited owner-reported title/illustration failure was
-reproduced with real Meta against Studio, and the contract
-correction was made locally; post-fix live proof is
-PENDING and is not accepted here.
-Prior live-model evidence below stays bound to its
-pre-Studio version.
-The guided flow covered by the genuine runs is: prepare
+Older live-model evidence below stays bound to its
+pre-Studio versions and is explicitly historical.
+The flow covered by the genuine runs is: prepare
 a page reference with no model request, inspect the exact
 page, explicitly confirm analysis, work through one
 active review step at a time, save or discard
 same-question edits before approval, and explicitly open
 the preview.
 None of the test results certifies teaching quality.
-
-Status: an existing Studio baseline was already deployed
-publicly.
-This source describes a changed local audit/repair candidate
-that is not yet deployed.
-A prior guided version was served at
-[hackathon-iynaa.site](https://hackathon-iynaa.site).
-These documents do not by themselves establish which exact
-build is currently live.
-Final release state requires an external verified
-exact-version readback, not this report.
-This report accompanies the source; it is not an
-always-current deployment-status statement.
-The newest genuine run below used deployed pre-Studio
-guided code.
 
 Meta authored the original product, application code,
 test suites, and the original inline vector artwork in
@@ -156,14 +162,28 @@ and navigation-specific alignment before it can support a
 Studio claim; no blanket browser-green claim is made for
 them.
 
-## Current local Studio verification (synthetic)
+## Current released Studio verification (synthetic providers)
 
-Current Studio verification here is synthetic and local.
+The complete ordinary root test population from the exact
+released archive passed on real Linux with no skips.
+That run used synthetic providers and made zero
+application-model calls.
+It is not only the earlier guided baseline.
+On Windows, the complete root population was exercised,
+all applicable methods passed, and one
+genuine-Linux-only test was skipped.
+The strict Windows result therefore remains NOT_PASS and
+must never be reported as all-PASS.
+No current moving test total is maintained in this file,
+and no latest count is guessed here.
+
+Other current Studio verification here is synthetic and
+local.
 The complete new local journey plus specific boundary
 cases have been executed with a synthetic provider,
 including no-file settings access and visible keyboard focus after page preparation.
-That execution is not exhaustive coverage and does not
-support a claim that every test or browser file was run.
+That targeted execution is not blanket coverage and does
+not support a claim that every browser file was run.
 
 The synthetic journey exercised, against a real local
 application: default file-first creation and the explicit
@@ -193,38 +213,46 @@ within that synthetic scope.
 Bounded geometry and keyboard checks are not physical
 Safari proof.
 
-This synthetic section claims no post-fix live proof for
-Studio; that proof is PENDING (see the pending repair
-candidate below).
-Synthetic evidence in this section and live pre-Studio
-evidence in the genuine runs below are separate layers.
+Synthetic evidence in this section, bounded post-fix
+live evidence below, the current Studio recording, and
+older pre-Studio live evidence are separate layers.
 Synthetic evidence is not genuine Meta educational
 quality and does not identify the cause of any earlier
 incomplete request.
 Physical device behavior, teacher gold-standard quality,
 classroom quality, and all possible states remain
 unproven.
-Deprecation and asynchronous warnings remain; no
+Deprecation and asynchronous-test warnings remain; no
 clean-log claim is made.
-No current moving test total is maintained in this file,
-and no latest count is guessed here.
 
-## Pending repair candidate — final verification not completed
+## Released repair — bounded post-fix live evidence
 
 A limited owner-reported title/illustration failure was
 reproduced with real Meta against Studio.
-The local correction addresses a prompt/schema mismatch for
+The released correction addresses a prompt/schema mismatch for
 status-conditioned abstention.
 Raw proposals remain separate from teacher-reviewed text,
 decisions, and preview items, and malformed output yields
 an honest failure rather than fabricated questions.
 No guarantee is made that every source produces questions.
 
-Post-fix live proof is PENDING and is not accepted here.
-New root and native tests for this candidate are under
-final verification, which is not completed, and no current
-pass count is stated.
-That pending verification also covers the native K-12 grade
+Post-fix live evidence is bounded.
+One fresh released-source title-only / illustration case
+completed its source and question requests and produced
+one supported title-recall draft and five abstentions.
+That is evidence for the corrected abstention contract
+in that case, not a zero-failure guarantee for every
+source or reader.
+Other post-fix page probes produced unreadable source
+proposals, and those pages were manually withheld before
+generation.
+Other generated drafts required Bloom or
+answer-guidance corrections.
+These limits are stated without turning the probes into
+a benchmark and without implying that all pages pass.
+Neither HTTP 201 nor schema conformance establishes
+educational accuracy.
+The released source includes the native K-12 grade
 dropdown in both setup and the question editor (empty
 choice, kindergarten, and grades 1 through 12); the grade
 persists as a string, with no backend enum coercion promised.
@@ -232,19 +260,19 @@ persists as a string, with no backend enum coercion promised.
 The exact browser recipe method is the one command in the
 README, from the `BROWSER_SMOKE` recipe:
 `python -B tools/run_studio_smoke.py --browser <installedChrome> --artifacts <freshdir>`.
-From an exact archive on Windows, it ran 1 method, with
-390/1280 viewport subTests.
+From the exact archive on Windows, it passed 1 method,
+with 390/1280 viewport subTests.
 That run is synthetic, not Meta evidence, gives no Safari
 or quality guarantee, and is not a claim that all browser
 suites pass.
 
-An existing Studio baseline was already deployed publicly;
-this changed audit candidate is not yet deployed.
-No commit or currently live build is asserted here.
-Final release state is established only by external
-verified exact-version readback, not by this report.
+The released source described here is the source deployed
+on 2026-11-03 and checked again on 2026-11-04 as recorded
+at the top of this report.
+That observed deployment state is not an indefinite
+availability guarantee.
 
-## Genuine Meta rehearsals
+## Genuine Meta runs
 
 The genuine runs below used Meta AI in explicit Meta
 mode, for page understanding and source-grounded question
@@ -252,19 +280,64 @@ drafting.
 The runtime code retains the model identifier and
 endpoint it requires; this report refers to the model
 generically as Meta AI.
-The newest guided run, the historical local rehearsal,
-and the earlier hosted rehearsal are distinct runs and
-are not combined; their counts must not be added together.
-The two earlier rehearsals were made against earlier
-source.
-All three runs predate Studio and remain bound to their
-pre-Studio versions.
+The current Studio recording, the historical guided run,
+the historical local rehearsal, and the earlier hosted
+rehearsal are distinct runs and are not combined; their
+counts must not be added together.
+The three older runs predate Studio and remain bound to
+their pre-Studio versions.
+They are explicitly historical; their outcomes are not
+rewritten.
 Prior failed attempts recorded below remain failures and
 are not deleted or relabeled.
 
-### Newest genuine guided run (2026-11-03) — distinct
+### Current Studio recording (2026-11-03) — newest
 
-Scope: deployed pre-art guided code; one private
+Scope: the current deployed Studio, recorded for the
+approved demonstration video.
+It is a real run, not synthetic and not a pre-Studio run.
+The teacher role was developer-operated.
+
+- Source requests: 1 (HTTP 201)
+- Question requests: 1 (HTTP 201)
+- Raw draft questions: 6
+- Raw abstentions: 0
+- Preview items after explicit model-assisted developer edits: 3
+- Rejected: 3
+- Effective preview coverage: Understand 2, Remember 1
+- Originals preserved: yes
+
+The source text was explicitly shortened to the selected
+reviewed passage.
+This is model-assisted developer review, not professional
+human-teacher approval or a human-teacher gold standard.
+Coverage is two levels only — not all six Bloom levels —
+and no claim is made that all six levels were valid.
+An earlier failed recording attempt remains a failure.
+This later success does not establish general reliability
+and is not combined with any older run below.
+
+The approved edited video is 111.3 seconds (16:9), with
+English narration and captions and an Arabic user
+interface.
+It is an edited developer demonstration with real
+captured footage, source attribution, and held-frame
+disclosures, not a new live session and not a generic
+finished teaching lesson.
+The recording retains a private-review label.
+ElevenLabs was used solely for the video narration; it
+is not an application feature or a Meta-generated voice.
+The video shows only the recorded historical Princeton /
+Arabic Collections Online page approved for that video.
+Arabic Collections Online describes its materials as
+believed to be in the public domain.
+That narrow approval is not blanket rights to other
+books or pages, and synthetic repository fixtures remain
+free of private source pages.
+
+### Historical genuine guided run (2026-11-03) — distinct
+
+Scope: deployed pre-art, pre-Studio guided code; one private
 development page; one source call and one question call,
 no retries.
 
@@ -328,8 +401,8 @@ and Create 1 — not all six Bloom levels.
 The final approved-only preview, preserved originals, and
 evidence links were verified.
 The standard public launcher was checked after this
-rehearsal; no second full model run occurred after that
-cutover.
+rehearsal; at that stage, no second full model run had
+occurred after that cutover.
 
 The observed hosted source request took 119.045 seconds.
 The observed hosted question request took 105.176 seconds.
@@ -353,15 +426,16 @@ Each genuine run used one development page.
 Source review and teacher-facing edits were
 model-assisted developer work.
 They were not professional human-teacher approval and are
-not a human-teacher gold standard; the newest run's six
-private-preview items likewise reflect explicit developer
-edits, not teacher approval.
-The six live drafts edited in these rehearsals are not
+not a human-teacher gold standard; the current Studio
+recording's three preview items and the historical guided
+run's six private-preview items likewise reflect explicit
+developer edits, not teacher approval.
+The live drafts edited in these runs are not
 human teacher-gold and are not six validated Bloom levels.
 No genuine run certifies transcription or OCR accuracy,
 Bloom classification, grade fit, Arabic accuracy, factual
 quality, or calibration.
-No new accuracy, latency, or quality claim is made for
+No accuracy, latency, or quality claim is made for
 Studio here.
 
 ## Hosted verification
@@ -383,32 +457,32 @@ Results from different operating systems are reported
 separately and are not merged into one total.
 
 An earlier full Linux root run remains historical
-evidence against earlier source.
-It is not a full root run of the current Studio source.
-Latest counts and hashes are not manually maintained in
-this file, and no raw development paths, identifiers, or
-hashes are reproduced here.
-Warnings are not claimed absent.
+evidence against earlier source and is distinct from
+the current released-archive Linux root run recorded
+above.
+Latest counts are not manually maintained in this file,
+and no private paths or identifiers are reproduced here.
+Deprecation and asynchronous-test warnings remain;
+warnings are not claimed absent and no clean-log claim
+is made.
 
-See Status at the top for what these documents do and do
-not assert about what is live.
-On 2026-11-02, exact assets, the standard hosted
-launcher, protected anonymous session reads, secure
-session cookies, and the finite retained usage policy
-were read back for the build then live; any future
-cutover requires its own version-specific verification
-and exact-version read-back.
-That read-back is not a production-quality or
-availability guarantee.
+See Current release and newest recording at the top for
+the observed 2026-11-03 deployment and the 2026-11-04
+check that five served assets still matched the checkout.
+An earlier read-back on 2026-11-02 covered the build then
+live and remains historical.
+Those read-backs are not production-quality or
+indefinite availability guarantees.
 
 Hosted verification with synthetic providers is not
 another live application-model call.
 It does not establish human-teacher quality.
 The genuine runs above are the live-model evidence,
 against the source versions stated there; the synthetic
-checks add no model run and are not a live run of Studio.
-No demonstration video, event submission, or public
-source-page rights are claimed here.
+checks add no model run.
+Approval of the demonstration video for judging access
+does not by itself claim an event outcome or grant
+blanket public source-page rights.
 
 ## What synthetic coverage establishes
 
@@ -434,13 +508,14 @@ claims.
 
 - No professional human-teacher approval is recorded.
 - No accuracy or calibration rate is reported.
-- See Status at the top: these documents do not assert a
-  public cutover of this pending repair candidate or
-  establish which exact build is currently live.
-  No demonstration video, final event submission, or
-  public source-page rights are recorded here, and
-  endpoint read-backs carry no production-quality or
-  availability guarantee.
+- The observed deployment and read-backs at the top
+  carry no production-quality or indefinite availability
+  guarantee and grant no blanket public source-page
+  rights.
+  Source quality still varies: unreadable source
+  proposals were withheld before generation, and some
+  drafts needed Bloom or answer-guidance corrections.
+  No run shows six valid Bloom levels after review.
 - Workspace content is in memory and can be lost on
   refresh, hosted session expiry, or restart.
   Optional hosted accounting persists usage metadata

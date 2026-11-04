@@ -232,9 +232,10 @@ both panes show and the switch hides. The permanent non-durable
 warning stays visible; there is no saved/autosaved claim, fake
 progress percentage, or create-from-blank control. Synthetic
 test fixtures prove neither real Meta output nor educational
-correctness: real-provider behavior, educational acceptance,
-full-lifecycle behavior, complete keyboard and responsive
-acceptance, and any hosting deployment remain pending and are
+correctness: they do not by themselves establish real-provider
+behavior, educational acceptance, or complete keyboard and
+responsive acceptance. Current hosting, release, and live-run
+status are recorded in `README.md` and `docs/VERIFICATION.md`,
 not claimed by this local client.
 
 ## Authority and currency
